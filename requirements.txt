@@ -19,6 +19,6 @@ IPython>=8.0.0
 gradio>=4.0.0
 
 # Local LLM inference
-transformers>=4.35.0
+transformers==4.45.2
 accelerate>=0.25.0
 bitsandbytes>=0.41.0
