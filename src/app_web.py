@@ -16,7 +16,7 @@ import json
 import logging
 import gradio as gr
 from pathlib import Path
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Generator
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -273,6 +273,101 @@ class WebAgent:
 
         return response_text, self.conversation_history, sources_md
 
+    def respond_stream(
+        self,
+        message: str,
+        history: List[Dict],
+    ) -> Generator[Tuple[str, str], None, None]:
+        """
+        Stream the agent response chunk by chunk.
+        Yields (current_response_text, sources_md).
+        """
+        self.initialize()
+
+        if not message.strip():
+            return
+
+        # Retrieve relevant documentation
+        results = retrieve(
+            query=message,
+            collection=self.collection,
+            embedding_model=self.embedding_model,
+            top_k=8,
+        )
+        doc_context = format_context(results)
+        sources_md = self._format_sources(results)
+
+        # Assemble system message
+        tool_descriptions = self.tool_executor.get_tool_descriptions()
+        system_message = SYSTEM_PROMPT_TEMPLATE.format(
+            tool_descriptions=tool_descriptions,
+        )
+        env_ctx = self._get_effective_env_context()
+        if env_ctx:
+            system_message += f"\n\n{env_ctx}"
+
+        # Build user message
+        user_message = (
+            "Based on the following official AMD ROCm documentation, "
+            "answer the user's question.\n\n"
+            "--- DOCUMENTATION CONTEXT ---\n"
+            f"{doc_context}\n"
+            "--- END CONTEXT ---\n\n"
+            f"**User Question:** {message}\n\n"
+            "Provide a clear, actionable answer grounded in the documentation. "
+            "Cite the source documents."
+        )
+
+        # Build messages
+        messages = [{"role": "system", "content": system_message}]
+        for msg in self.conversation_history[-6:]:
+            messages.append(msg)
+        messages.append({"role": "user", "content": user_message})
+
+        # Call LLM with stream=True
+        stream_generator = self.provider.chat(messages=messages, stream=True)
+        
+        response_text = ""
+        for chunk in stream_generator:
+            response_text += chunk
+            yield response_text, sources_md
+
+        # Handle tool calls (if any are emitted by the LLM)
+        tool_calls = self.tool_executor.parse_tool_calls(response_text)
+        if tool_calls:
+            # Yield a message indicating that diagnostic tools are running
+            yield response_text + "\n\n*Running diagnostic tools...*", sources_md
+            
+            tool_executor_auto = ToolExecutor(auto_approve=True)
+            tool_results = []
+            for tool_name in tool_calls:
+                result_text = tool_executor_auto.execute_and_format(tool_name)
+                tool_results.append(result_text)
+
+            messages.append({"role": "assistant", "content": response_text})
+            tool_context = "\n\n".join(tool_results)
+            messages.append({
+                "role": "user",
+                "content": (
+                    f"Here are the results of the diagnostic tools:\n\n"
+                    f"{tool_context}\n\n"
+                    f"Based on these results, provide your answer."
+                ),
+            })
+            
+            # Stream the second stage response
+            second_generator = self.provider.chat(messages=messages, stream=True)
+            second_response_text = ""
+            for chunk in second_generator:
+                second_response_text += chunk
+                yield second_response_text, sources_md
+            
+            response_text = second_response_text
+
+        # Update history
+        self.conversation_history.append({"role": "user", "content": message})
+        self.conversation_history.append({"role": "assistant", "content": response_text})
+
     def _format_sources(self, results: List[Dict]) -> str:
         """Format retrieval results as markdown for the sources panel."""
         if not results:
@@ -449,8 +544,6 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
                 chatbot = gr.Chatbot(
                     label="Chat",
                     height=500,
-                    
-                    
                 )
 
                 with gr.Row():
@@ -542,25 +635,25 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
         # ── Event Handlers ──
 
         def user_submit(message, history):
-            """Handle user message submission."""
+            """Handle user message submission with streaming."""
             if not message.strip():
-                return "", history, gr.update(), gr.update(), gr.update()
+                yield "", history, gr.update(), gr.update(), gr.update()
+                return
 
             # Add user message to display immediately
             history = history or []
             history.append({"role": "user", "content": message})
 
-            # Get agent response
-            response_text, _, sources = agent.respond(message, history)
+            # Yield first to clear textbox and show the user's message immediately!
+            yield "", history, agent.get_status_md(), "", agent.get_gpu_monitor_md()
 
-            # Add assistant response
-            history.append({"role": "assistant", "content": response_text})
+            # Add assistant placeholder response
+            history.append({"role": "assistant", "content": ""})
 
-            # Update status and GPU monitor
-            status = agent.get_status_md()
-            gpu_mon = agent.get_gpu_monitor_md()
-
-            return "", history, status, sources, gpu_mon
+            # Stream response
+            for response_text, sources in agent.respond_stream(message, history[:-1]):
+                history[-1]["content"] = response_text
+                yield "", history, agent.get_status_md(), sources, agent.get_gpu_monitor_md()
 
         def handle_clear():
             """Handle clear history button."""
