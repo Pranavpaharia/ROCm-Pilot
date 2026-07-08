@@ -23,7 +23,7 @@ else
 fi
 
 echo "  ↓ Installing additional dependencies..."
-pip install --quiet --break-system-packages chromadb sentence-transformers openai tqdm ipywidgets
+pip install --quiet --break-system-packages --ignore-installed chromadb sentence-transformers openai tqdm ipywidgets
 echo "✅ Dependencies installed"
 echo ""
 
