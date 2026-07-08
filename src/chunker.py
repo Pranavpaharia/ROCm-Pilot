@@ -58,6 +58,8 @@ def _chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str
         end = min(start + chunk_size, len(words))
         chunk = ' '.join(words[start:end])
         chunks.append(chunk)
+        if end == len(words):
+            break
         start = end - overlap
         if start >= len(words):
             break
