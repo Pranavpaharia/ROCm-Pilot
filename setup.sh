@@ -34,7 +34,11 @@ fi
 echo ""
 
 echo "  ↓ Installing additional dependencies..."
-"$PYTHON_BIN" -m pip install --quiet --break-system-packages chromadb sentence-transformers openai tqdm ipywidgets
+"$PYTHON_BIN" -m pip install --break-system-packages \
+    chromadb \
+    sentence-transformers \
+    transformers==4.45.2 \
+    openai tqdm ipywidgets
 echo "✅ Dependencies installed"
 echo ""
 
