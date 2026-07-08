@@ -15,7 +15,7 @@ echo ""
 
 # 1. Install only the extra dependencies (PyTorch is pre-installed!)
 echo "[1/4] Installing additional Python dependencies..."
-pip install --quiet chromadb sentence-transformers openai tqdm ipywidgets
+pip install --quiet --break-system-packages chromadb sentence-transformers openai tqdm ipywidgets
 echo "✅ Dependencies installed"
 echo ""
 
