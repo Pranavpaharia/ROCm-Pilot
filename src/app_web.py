@@ -449,8 +449,8 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
                 chatbot = gr.Chatbot(
                     label="Chat",
                     height=500,
-                    show_copy_button=True,
-                    type="messages",
+                    
+                    
                 )
 
                 with gr.Row():
