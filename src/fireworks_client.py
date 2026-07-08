@@ -6,8 +6,8 @@ Uses the OpenAI-compatible chat-completions endpoint.
 import os
 from typing import Generator, Union
 
-# Default model — Llama 3.1 70B is a strong general-purpose choice
-DEFAULT_MODEL = "accounts/fireworks/models/llama-v3p1-70b-instruct"
+# Default model — DeepSeek V4 Pro
+DEFAULT_MODEL = "accounts/fireworks/models/deepseek-v4-pro"
 FIREWORKS_BASE_URL = "https://api.fireworks.ai/inference/v1"
 
 
