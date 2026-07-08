@@ -1,11 +1,13 @@
 """
 Document collector for ROCm documentation.
 Walks cloned GitHub repos and extracts all documentation files.
+Includes markdown table extraction for compatibility matrices.
 """
 
 import os
+import re
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Optional
 from tqdm import tqdm
 
 
@@ -46,6 +48,108 @@ def classify_doc_type(filepath: str) -> str:
         return 'example'
     else:
         return 'general'
+
+
+def _extract_markdown_tables(content: str) -> List[Dict]:
+    """
+    Extract GFM-style markdown tables from content.
+    
+    Returns a list of table dicts, each containing:
+        - headers: List[str] (column headers)
+        - rows: List[List[str]] (row data)
+        - raw: str (original markdown text)
+        - start_pos: int (character position in content)
+        - end_pos: int (character position in content)
+    """
+    tables = []
+    
+    # Pattern to match markdown tables:
+    # A header row with pipes, a separator row with dashes/pipes, then data rows
+    table_pattern = re.compile(
+        r'((?:^\|.+\|\s*\n)+)'  # header + data rows (captured together)
+        r'(?=\n[^\n]*\n|\Z)',    # followed by non-table content or end
+        re.MULTILINE,
+    )
+    
+    # More precise: find table blocks
+    lines = content.split('\n')
+    i = 0
+    while i < len(lines):
+        # Look for a line that starts with | (potential table start)
+        if lines[i].strip().startswith('|'):
+            table_lines = []
+            start_pos = i
+            
+            # Collect consecutive pipe-delimited lines
+            while i < len(lines) and lines[i].strip().startswith('|'):
+                table_lines.append(lines[i])
+                i += 1
+            
+            # Need at least 3 lines: header, separator, 1+ data rows
+            if len(table_lines) >= 3:
+                # Verify second line is a separator (contains ---)
+                separator = table_lines[1].strip()
+                if re.match(r'^\|[\s\-:|]+\|$', separator):
+                    # Parse the table
+                    headers = _parse_table_row(table_lines[0])
+                    rows = []
+                    for row_line in table_lines[2:]:
+                        row = _parse_table_row(row_line)
+                        if row:
+                            rows.append(row)
+                    
+                    raw_text = '\n'.join(table_lines)
+                    tables.append({
+                        'headers': headers,
+                        'rows': rows,
+                        'raw': raw_text,
+                        'start_line': start_pos,
+                        'end_line': i,
+                    })
+        else:
+            i += 1
+    
+    return tables
+
+
+def _parse_table_row(line: str) -> List[str]:
+    """Parse a single markdown table row into cell values."""
+    # Remove leading/trailing pipes and split
+    line = line.strip()
+    if line.startswith('|'):
+        line = line[1:]
+    if line.endswith('|'):
+        line = line[:-1]
+    
+    cells = [cell.strip() for cell in line.split('|')]
+    return cells
+
+
+def _format_table_as_text(table: Dict) -> str:
+    """
+    Convert a parsed table dict into a readable text format
+    suitable for embedding and retrieval.
+    
+    Format: "Column1: Value1 | Column2: Value2 | ..."
+    One line per row.
+    """
+    headers = table.get('headers', [])
+    rows = table.get('rows', [])
+    
+    if not headers or not rows:
+        return table.get('raw', '')
+    
+    lines = []
+    for row in rows:
+        parts = []
+        for j, cell in enumerate(row):
+            if j < len(headers):
+                parts.append(f"{headers[j]}: {cell}")
+            else:
+                parts.append(cell)
+        lines.append(' | '.join(parts))
+    
+    return '\n'.join(lines)
 
 
 def collect_documents(raw_docs_dir: str) -> List[Dict]:
@@ -106,12 +210,16 @@ def collect_documents(raw_docs_dir: str) -> List[Dict]:
                 rel_path = os.path.relpath(filepath, repo_dir)
                 source_url = base_url + rel_path.replace('.rst', '.html').replace('.md', '.html')
 
+                # Extract markdown tables if present
+                tables = _extract_markdown_tables(content)
+                
                 documents.append({
                     'content': content,
                     'source_repo': repo_name,
                     'source_file': rel_path,
                     'source_url': source_url,
                     'doc_type': classify_doc_type(rel_path),
+                    'tables': tables,
                 })
 
             except Exception as e:

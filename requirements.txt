@@ -10,3 +10,6 @@ tqdm>=4.65.0
 # Jupyter UI
 ipywidgets>=8.0.0
 IPython>=8.0.0
+
+# Web UI
+gradio>=4.0.0
