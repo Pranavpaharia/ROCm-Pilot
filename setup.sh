@@ -23,8 +23,12 @@ else
     apt-get remove -y python3-torch python3-torchvision python3-torchaudio python3-typing-extensions 2>/dev/null || true
     echo "  ↓ Uninstalling any existing pip PyTorch versions..."
     "$PYTHON_BIN" -m pip uninstall -y torch torchvision torchaudio 2>/dev/null || true
-    echo "  ↓ Installing PyTorch + torchvision + torchaudio (ROCm support)..."
-    "$PYTHON_BIN" -m pip install --break-system-packages --ignore-installed torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.2
+    echo "  ↓ Installing PyTorch + torchvision + torchaudio (ROCm 6.2 support)..."
+    "$PYTHON_BIN" -m pip install --break-system-packages --ignore-installed \
+        torch==2.5.1+rocm6.2 \
+        torchvision==0.20.1+rocm6.2 \
+        torchaudio==2.5.1+rocm6.2 \
+        --index-url https://download.pytorch.org/whl/rocm6.2
     echo "✅ PyTorch ROCm installed"
 fi
 echo ""
