@@ -13,8 +13,16 @@ echo "  (Optimized — skips pre-installed packages)"
 echo "============================================"
 echo ""
 
-# 1. Install only the extra dependencies (PyTorch is pre-installed!)
-echo "[1/4] Installing additional Python dependencies..."
+# 1. Install PyTorch with ROCm if not already present
+echo "[1/4] Checking Python dependencies..."
+if ! python3 -c "import torch" 2>/dev/null; then
+    echo "  ↓ PyTorch not found. Installing PyTorch with ROCm support..."
+    pip install --break-system-packages torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.2
+else
+    echo "  ✓ PyTorch is already installed"
+fi
+
+echo "  ↓ Installing additional dependencies..."
 pip install --quiet --break-system-packages chromadb sentence-transformers openai tqdm ipywidgets
 echo "✅ Dependencies installed"
 echo ""
