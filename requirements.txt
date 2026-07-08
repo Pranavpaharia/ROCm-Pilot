@@ -1,0 +1,12 @@
+# Core RAG dependencies
+chromadb>=0.4.0
+sentence-transformers>=2.2.0
+openai>=1.0.0
+
+# Document processing
+requests>=2.31.0
+tqdm>=4.65.0
+
+# Jupyter UI
+ipywidgets>=8.0.0
+IPython>=8.0.0
