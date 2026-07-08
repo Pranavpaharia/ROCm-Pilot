@@ -15,23 +15,33 @@ echo ""
 
 # 1. Install ROCm-compatible PyTorch if not already available
 PYTHON_BIN="${PYTHON_CMD:-python3}"
-echo "[1/4] Checking for ROCm-compatible PyTorch..."
-if "$PYTHON_BIN" -c "import torch; print(torch.cuda.is_available())" 2>/dev/null | grep -q "True"; then
-    echo "  ✓ PyTorch with ROCm support is already installed and working. Skipping installation..."
+echo "[1/4] Checking for PyTorch..."
+if "$PYTHON_BIN" -c "import torch" 2>/dev/null; then
+    echo "  ✓ PyTorch is already installed. Skipping installation..."
 else
-    echo "  ↓ Purging any apt-installed PyTorch packages to prevent conflicts..."
-    apt-get remove -y python3-torch python3-torchvision python3-torchaudio python3-typing-extensions 2>/dev/null || true
-    echo "  ↓ Uninstalling any existing pip PyTorch versions..."
-    "$PYTHON_BIN" -m pip uninstall -y torch torchvision torchaudio 2>/dev/null || true
-    echo "  ↓ Installing PyTorch + torchvision + torchaudio (ROCm 6.2 support)..."
-    "$PYTHON_BIN" -m pip install --break-system-packages --ignore-installed \
-        torch==2.5.1+rocm6.2 \
-        torchvision==0.20.1+rocm6.2 \
-        torchaudio==2.5.1+rocm6.2 \
-        --index-url https://download.pytorch.org/whl/rocm6.2
-    echo "✅ PyTorch ROCm installed"
+    IS_DARWIN=$(uname -s | grep -i -q "Darwin" && echo "true" || echo "false")
+    if [ "$IS_DARWIN" = "true" ]; then
+        echo "  ↓ Installing standard PyTorch for macOS..."
+        "$PYTHON_BIN" -m pip install --break-system-packages torch torchvision torchaudio
+        echo "✅ PyTorch (Mac) installed"
+    else
+        echo "  ↓ Purging any apt-installed PyTorch packages to prevent conflicts..."
+        apt-get remove -y python3-torch python3-torchvision python3-torchaudio python3-typing-extensions 2>/dev/null || true
+        echo "  ↓ Uninstalling any existing pip PyTorch versions..."
+        "$PYTHON_BIN" -m pip uninstall -y torch torchvision torchaudio 2>/dev/null || true
+        echo "  ↓ Installing PyTorch + torchvision + torchaudio (ROCm 6.2 support)..."
+        "$PYTHON_BIN" -m pip install --break-system-packages --ignore-installed \
+            torch==2.5.1+rocm6.2 \
+            torchvision==0.20.1+rocm6.2 \
+            torchaudio==2.5.1+rocm6.2 \
+            --index-url https://download.pytorch.org/whl/rocm6.2
+        echo "✅ PyTorch ROCm installed"
+    fi
 fi
 echo ""
+
+echo "  ↓ Purging potential conflicting packages..."
+"$PYTHON_BIN" -m pip uninstall -y transformers sentence-transformers chromadb 2>/dev/null || true
 
 echo "  ↓ Installing additional dependencies..."
 "$PYTHON_BIN" -m pip install --break-system-packages \

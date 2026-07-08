@@ -238,7 +238,8 @@ def format_context(results: List[Dict], max_words: int = 3000) -> str:
         header = (
             f"[Source {i}: {meta['source_repo']}/{meta['source_file']} "
             f"| Type: {meta['doc_type']} "
-            f"| Section: {meta['section_title']}]"
+            f"| Section: {meta['section_title']} "
+            f"| URL: {meta.get('source_url', 'N/A')}]"
         )
         context_parts.append(f"{header}\n{text}")
         total_words += words

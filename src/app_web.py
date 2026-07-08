@@ -588,13 +588,6 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
                         elem_classes=["monitor-panel"],
                     )
 
-                # Sources
-                with gr.Accordion("Sources", open=False):
-                    sources_md = gr.Markdown(
-                        value="",
-                        elem_classes=["sources-panel"],
-                    )
-
                 # Remote Diagnostics
                 with gr.Accordion("Remote Machine Diagnostics", open=False):
                     gr.Markdown(
@@ -617,6 +610,15 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
                         "Load Remote Environment", size="sm", variant="secondary",
                     )
                     remote_status = gr.Markdown("")
+
+        # Retrieved Sources Panel below the main layout
+        with gr.Row():
+            with gr.Column(scale=1):
+                with gr.Accordion("Retrieved Source References", open=True):
+                    sources_md = gr.Markdown(
+                        value="*References will appear here after you send a message.*",
+                        elem_classes=["sources-panel"],
+                    )
 
         # AMD Compute Showcase banner
         gr.HTML(

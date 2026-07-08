@@ -208,7 +208,20 @@ def collect_documents(raw_docs_dir: str) -> List[Dict]:
                     content = content[:50_000]
 
                 rel_path = os.path.relpath(filepath, repo_dir)
-                source_url = base_url + rel_path.replace('.rst', '.html').replace('.md', '.html')
+                
+                # Clean rel_path by stripping leading 'docs/' if the repo has it (Sphinx builds from docs/)
+                clean_rel_path = rel_path
+                if clean_rel_path.startswith('docs' + os.sep):
+                    clean_rel_path = clean_rel_path[len('docs' + os.sep):]
+                elif clean_rel_path.startswith('docs/'):
+                    clean_rel_path = clean_rel_path[5:]
+                
+                if 'github.com' in base_url:
+                    # Keep markup extension for direct GitHub links
+                    source_url = base_url + clean_rel_path
+                else:
+                    # Convert to .html for hosted readthedocs/Sphinx websites
+                    source_url = base_url + clean_rel_path.replace('.rst', '.html').replace('.md', '.html')
 
                 # Extract markdown tables if present
                 tables = _extract_markdown_tables(content)
