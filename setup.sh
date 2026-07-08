@@ -13,19 +13,24 @@ echo "  (Optimized — skips pre-installed packages)"
 echo "============================================"
 echo ""
 
-# 1. Force clean reinstall of PyTorch with ROCm support
-echo "[1/4] Installing ROCm-compatible PyTorch..."
-echo "  ↓ Purging any apt-installed PyTorch packages to prevent conflicts..."
-apt-get remove -y python3-torch python3-torchvision python3-torchaudio python3-typing-extensions 2>/dev/null || true
-echo "  ↓ Uninstalling any existing pip PyTorch versions..."
-pip uninstall -y --break-system-packages torch torchvision torchaudio || true
-echo "  ↓ Installing PyTorch + torchvision + torchaudio (ROCm support)..."
-pip install --break-system-packages --ignore-installed torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.2
-echo "✅ PyTorch ROCm installed"
+# 1. Install ROCm-compatible PyTorch if not already available
+PYTHON_BIN="${PYTHON_CMD:-python3}"
+echo "[1/4] Checking for ROCm-compatible PyTorch..."
+if "$PYTHON_BIN" -c "import torch; print(torch.cuda.is_available())" 2>/dev/null | grep -q "True"; then
+    echo "  ✓ PyTorch with ROCm support is already installed and working. Skipping installation..."
+else
+    echo "  ↓ Purging any apt-installed PyTorch packages to prevent conflicts..."
+    apt-get remove -y python3-torch python3-torchvision python3-torchaudio python3-typing-extensions 2>/dev/null || true
+    echo "  ↓ Uninstalling any existing pip PyTorch versions..."
+    "$PYTHON_BIN" -m pip uninstall -y torch torchvision torchaudio 2>/dev/null || true
+    echo "  ↓ Installing PyTorch + torchvision + torchaudio (ROCm support)..."
+    "$PYTHON_BIN" -m pip install --break-system-packages --ignore-installed torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.2
+    echo "✅ PyTorch ROCm installed"
+fi
 echo ""
 
 echo "  ↓ Installing additional dependencies..."
-pip install --quiet --break-system-packages --ignore-installed chromadb sentence-transformers openai tqdm ipywidgets
+"$PYTHON_BIN" -m pip install --quiet --break-system-packages --ignore-installed chromadb sentence-transformers openai tqdm ipywidgets
 echo "✅ Dependencies installed"
 echo ""
 
@@ -55,7 +60,7 @@ echo ""
 # 3. Verify GPU
 echo "[3/4] Verifying AMD GPU..."
 rocm-smi 2>/dev/null || echo "⚠️  rocm-smi not available"
-python3 -c "
+"$PYTHON_BIN" -c "
 import torch
 print(f'  PyTorch: {torch.__version__}')
 print(f'  ROCm/HIP available: {torch.cuda.is_available()}')
@@ -69,7 +74,7 @@ echo ""
 # 4. Build knowledge base (skip if already exists)
 if [ -d "data/chroma_db" ] && [ "$(ls -A data/chroma_db 2>/dev/null)" ]; then
     echo "[4/4] Knowledge base already exists — skipping build"
-    python3 -c "
+    "$PYTHON_BIN" -c "
 import chromadb
 client = chromadb.PersistentClient(path='data/chroma_db')
 col = client.get_collection('rocm_docs')
@@ -77,7 +82,7 @@ print(f'  ✅ {col.count():,} chunks in vector store')
 "
 else
     echo "[4/4] Building knowledge base (first run — may take a few minutes)..."
-    python3 -c "
+    "$PYTHON_BIN" -c "
 from src.scraper import collect_documents
 from src.chunker import chunk_documents
 from src.embedder import build_vector_store

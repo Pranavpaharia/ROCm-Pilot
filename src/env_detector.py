@@ -4,10 +4,14 @@ Auto-detects GPU model(s), ROCm version, installed frameworks, and OS details.
 Supports multi-GPU systems and containerized environments.
 """
 
+import json
+import logging
 import os
 import subprocess
 import sys
 from typing import Dict, List, Optional
+
+logger = logging.getLogger('rocm_pilot.env')
 
 
 def _run_cmd(cmd: str, timeout: int = 10) -> Optional[str]:
@@ -241,18 +245,256 @@ def detect_software() -> Dict:
     return software
 
 
+def detect_gpu_utilization() -> Dict:
+    """
+    Query real-time GPU utilization, memory usage, and temperature via rocm-smi.
+
+    Returns a dict keyed by GPU ID (e.g. "card0") with sub-keys:
+        gpu_id, gpu_use_percent, mem_use_percent, mem_used_mb,
+        mem_total_mb, temperature_c.
+    Returns an empty dict on failure.
+    """
+    result: Dict = {}
+    raw = _run_cmd('rocm-smi --showuse --showmemuse --showtemp --json 2>/dev/null')
+    if not raw:
+        logger.debug("rocm-smi utilization query returned no output")
+        return result
+
+    try:
+        data = json.loads(raw)
+    except (json.JSONDecodeError, ValueError) as exc:
+        logger.warning("Failed to parse rocm-smi JSON output: %s", exc)
+        return result
+
+    for card_key, card_data in data.items():
+        if not isinstance(card_data, dict):
+            continue
+        gpu_id = card_key  # e.g. "card0"
+
+        # Extract GPU usage percentage
+        gpu_use = card_data.get('GPU use (%)', card_data.get('GPU Usage (%)', None))
+        # Extract memory usage percentage
+        mem_use = card_data.get('GPU memory use (%)', card_data.get('GPU Memory Usage (%)', None))
+        # Extract temperature (edge)
+        temperature = card_data.get('Temperature (Sensor edge) (C)',
+                                    card_data.get('Temperature (edge) (C)', None))
+
+        # VRAM totals — try common key patterns
+        vram_total = card_data.get('VRAM Total Memory (B)',
+                                   card_data.get('vram_total', None))
+        vram_used = card_data.get('VRAM Total Used Memory (B)',
+                                  card_data.get('vram_used', None))
+
+        entry: Dict = {'gpu_id': gpu_id}
+
+        # Safe numeric conversion helper
+        def _to_float(val: object) -> Optional[float]:
+            if val is None:
+                return None
+            try:
+                return float(val)
+            except (TypeError, ValueError):
+                return None
+
+        entry['gpu_use_percent'] = _to_float(gpu_use)
+        entry['mem_use_percent'] = _to_float(mem_use)
+        entry['temperature_c'] = _to_float(temperature)
+
+        # Convert bytes → MB for VRAM
+        vram_total_f = _to_float(vram_total)
+        vram_used_f = _to_float(vram_used)
+        entry['mem_total_mb'] = round(vram_total_f / (1024 * 1024), 1) if vram_total_f is not None else None
+        entry['mem_used_mb'] = round(vram_used_f / (1024 * 1024), 1) if vram_used_f is not None else None
+
+        result[gpu_id] = entry
+
+    logger.debug("GPU utilization detected for %d card(s)", len(result))
+    return result
+
+
+def detect_gpu_processes() -> List[Dict]:
+    """
+    Detect processes currently using AMD GPUs via rocm-smi.
+
+    Returns a list of dicts with keys:
+        pid, gpu_id, vram_usage, process_name.
+    Returns an empty list on failure.
+    """
+    processes: List[Dict] = []
+
+    # Try --showpidgpus first (more detail), fall back to --showpids
+    raw = _run_cmd('rocm-smi --showpidgpus 2>/dev/null')
+    if not raw:
+        raw = _run_cmd('rocm-smi --showpids 2>/dev/null')
+    if not raw:
+        logger.debug("rocm-smi process query returned no output")
+        return processes
+
+    # Parse tabular output — typical columns:
+    #   PID  GPU  VRAM Usage  (or similar)
+    # Lines with purely dashes or headers are skipped.
+    for line in raw.strip().split('\n'):
+        line = line.strip()
+        if not line or line.startswith('=') or line.startswith('-'):
+            continue
+        # Skip header-like rows
+        lower = line.lower()
+        if 'pid' in lower and ('gpu' in lower or 'vram' in lower):
+            continue
+
+        parts = line.split()
+        if len(parts) < 1:
+            continue
+
+        # First token should be PID (numeric)
+        try:
+            pid = int(parts[0])
+        except ValueError:
+            continue
+
+        gpu_id = parts[1] if len(parts) > 1 else 'N/A'
+        vram_usage = parts[2] if len(parts) > 2 else 'N/A'
+
+        # Resolve process name from /proc or ps
+        proc_name = _resolve_process_name(pid)
+
+        processes.append({
+            'pid': pid,
+            'gpu_id': gpu_id,
+            'vram_usage': vram_usage,
+            'process_name': proc_name,
+        })
+
+    logger.debug("Detected %d GPU process(es)", len(processes))
+    return processes
+
+
+def _resolve_process_name(pid: int) -> str:
+    """
+    Resolve a human-readable process name for a PID.
+    Tries /proc/{pid}/comm first, then falls back to ps.
+    """
+    # Method 1: /proc filesystem (Linux)
+    comm_path = f'/proc/{pid}/comm'
+    try:
+        if os.path.isfile(comm_path):
+            with open(comm_path, 'r') as fh:
+                name = fh.read().strip()
+                if name:
+                    return name
+    except (OSError, PermissionError):
+        pass
+
+    # Method 2: ps command (portable)
+    name = _run_cmd(f'ps -p {pid} -o comm= 2>/dev/null')
+    if name:
+        return name
+
+    return 'unknown'
+
+
+def format_gpu_monitor(utilization: Dict, processes: List[Dict]) -> str:
+    """
+    Format GPU utilization and running processes as a readable
+    markdown string suitable for display in the web UI.
+
+    Args:
+        utilization: dict returned by detect_gpu_utilization().
+        processes:   list returned by detect_gpu_processes().
+
+    Returns:
+        A multi-line markdown string.
+    """
+    lines: List[str] = ['## 🖥️ GPU Monitor', '']
+
+    # --- Utilization section ---
+    if utilization:
+        for card_key in sorted(utilization.keys()):
+            info = utilization[card_key]
+            gpu_id = info.get('gpu_id', card_key)
+            gpu_pct = info.get('gpu_use_percent')
+            mem_pct = info.get('mem_use_percent')
+            mem_used = info.get('mem_used_mb')
+            mem_total = info.get('mem_total_mb')
+            temp = info.get('temperature_c')
+
+            lines.append(f'### {gpu_id}')
+
+            # GPU usage bar
+            if gpu_pct is not None:
+                bar = _progress_bar(gpu_pct)
+                lines.append(f'**GPU Usage:** {bar} {gpu_pct:.0f}%')
+            else:
+                lines.append('**GPU Usage:** N/A')
+
+            # VRAM bar
+            if mem_used is not None and mem_total is not None and mem_total > 0:
+                vram_pct = (mem_used / mem_total) * 100
+                bar = _progress_bar(vram_pct)
+                lines.append(
+                    f'**VRAM:** {bar} {mem_used:.0f} MB / {mem_total:.0f} MB '
+                    f'({vram_pct:.1f}%)'
+                )
+            elif mem_pct is not None:
+                bar = _progress_bar(mem_pct)
+                lines.append(f'**VRAM:** {bar} {mem_pct:.0f}%')
+            else:
+                lines.append('**VRAM:** N/A')
+
+            # Temperature
+            if temp is not None:
+                temp_emoji = '🔥' if temp >= 80 else '🌡️'
+                lines.append(f'**Temp:** {temp_emoji} {temp:.0f} °C')
+            else:
+                lines.append('**Temp:** N/A')
+
+            lines.append('')
+    else:
+        lines.append('*No GPU utilization data available.*')
+        lines.append('')
+
+    # --- Process table ---
+    lines.append('### Running GPU Processes')
+    if processes:
+        lines.append('')
+        lines.append('| PID | GPU | VRAM | Process |')
+        lines.append('|-----|-----|------|---------|')
+        for proc in processes:
+            lines.append(
+                f"| {proc['pid']} | {proc['gpu_id']} | "
+                f"{proc['vram_usage']} | {proc['process_name']} |"
+            )
+    else:
+        lines.append('*No GPU processes detected.*')
+
+    lines.append('')
+    return '\n'.join(lines)
+
+
+def _progress_bar(pct: float, width: int = 20) -> str:
+    """Render a text progress bar: [████████░░░░░░░░░░░░]."""
+    pct = max(0.0, min(100.0, pct))
+    filled = int(round(width * pct / 100))
+    empty = width - filled
+    return f'[{"█" * filled}{"░" * empty}]'
+
+
 def detect_environment() -> Dict:
     """
-    Run full environment detection (GPUs + software + container).
+    Run full environment detection (GPUs + software + container + utilization + processes).
     Returns a dict with:
         - gpus: List[Dict] (one per detected GPU)
         - software: Dict
         - container: Dict
+        - gpu_utilization: Dict
+        - gpu_processes: List[Dict]
     """
     return {
         'gpus': detect_gpus(),
         'software': detect_software(),
         'container': _detect_container(),
+        'gpu_utilization': detect_gpu_utilization(),
+        'gpu_processes': detect_gpu_processes(),
     }
 
 

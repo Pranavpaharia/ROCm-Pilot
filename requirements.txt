@@ -3,6 +3,10 @@ chromadb>=0.4.0
 sentence-transformers>=2.2.0
 openai>=1.0.0
 
+# Cross-encoder reranking (GPU-accelerated)
+# Loaded lazily by retriever.py — runs on AMD GPU via ROCm
+
+
 # Document processing
 requests>=2.31.0
 tqdm>=4.65.0
@@ -13,3 +17,8 @@ IPython>=8.0.0
 
 # Web UI
 gradio>=4.0.0
+
+# Local LLM inference
+transformers>=4.35.0
+accelerate>=0.25.0
+bitsandbytes>=0.41.0

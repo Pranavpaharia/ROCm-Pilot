@@ -3,6 +3,7 @@ ROCm-Pilot Agent — the main RAG agent that answers AMD/ROCm questions
 grounded in official documentation.
 """
 
+import logging
 import os
 import re
 import subprocess
@@ -11,7 +12,7 @@ from pathlib import Path
 
 from src.env_detector import detect_environment, format_env_context
 from src.retriever import get_retriever, retrieve, format_context
-from src.fireworks_client import chat, DEFAULT_MODEL
+from src.llm_provider import get_provider, FireworksProvider
 
 
 # ──────────────────────────────────────────────────────────────────
@@ -260,7 +261,7 @@ class RocmPilotAgent:
     def __init__(
         self,
         db_path: str = 'data/chroma_db',
-        model: str = DEFAULT_MODEL,
+        provider_type: str = "cloud", model: str = "accounts/fireworks/models/deepseek-v4-pro",
         auto_detect_env: bool = True,
         auto_approve_tools: bool = False,
     ):
@@ -273,8 +274,9 @@ class RocmPilotAgent:
             auto_detect_env: Whether to auto-detect AMD hardware on startup.
             auto_approve_tools: If True, skip user approval for tool execution.
         """
-        self.model = model
+        self.provider = get_provider(provider_type, model)
         self.conversation_history: List[Dict[str, str]] = []
+        self.provider_type = provider_type
         self.env_context = ""
         self.embedding_model = None
         self.tool_executor = ToolExecutor(auto_approve=auto_approve_tools)
@@ -304,6 +306,9 @@ class RocmPilotAgent:
             env = detect_environment()
             self.env_context = format_env_context(env)
             print(self.env_context)
+
+        # Log GPU status at startup
+        self._log_gpu_status()
 
     # ------------------------------------------------------------------ #
     #  Core Q&A                                                           #
@@ -366,18 +371,18 @@ class RocmPilotAgent:
             messages.append(msg)
         messages.append({"role": "user", "content": user_message})
 
-        # Step 5 — Call Fireworks AI (with optional tool execution loop)
+        # Step 5 — Call LLM with tool execution loop
         full_response = ""
         for tool_round in range(max_tool_rounds + 1):
             # Call the LLM
-            if stream and tool_round == 0:
+            if stream:
                 response_text = ""
-                for chunk in chat(messages=messages, model=self.model, stream=True):
+                for chunk in self.provider.chat(messages=messages, stream=True):
                     print(chunk, end="", flush=True)
                     response_text += chunk
-                print()  # trailing newline
+                print()
             else:
-                response_text = chat(messages=messages, model=self.model)
+                response_text = self.provider.chat(messages=messages, stream=False)
 
             # Check for tool calls
             tool_calls = self.tool_executor.parse_tool_calls(response_text)
@@ -406,14 +411,13 @@ class RocmPilotAgent:
             # Get a follow-up response from the LLM
             if stream:
                 followup = ""
-                for chunk in chat(messages=messages, model=self.model, stream=True):
+                for chunk in self.provider.chat(messages=messages, stream=True):
                     print(chunk, end="", flush=True)
                     followup += chunk
                 print()
-                full_response = response_text + "\n\n" + followup
             else:
-                followup = chat(messages=messages, model=self.model)
-                full_response = response_text + "\n\n" + followup
+                followup = self.provider.chat(messages=messages, stream=False)
+            full_response = response_text + "\n\n" + followup
 
             # Update messages for potential next round
             messages.append({"role": "assistant", "content": followup})
@@ -448,6 +452,49 @@ class RocmPilotAgent:
         """Reset the conversation history."""
         self.conversation_history.clear()
         print("🗑️  Conversation history cleared.")
+
+    def _log_gpu_status(self):
+        """Log GPU model, VRAM, and HIP version at startup."""
+        logger = logging.getLogger("rocm_pilot")
+        try:
+            # Get GPU product name
+            result = subprocess.run(
+                "rocm-smi --showproductname",
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if result.returncode == 0:
+                logger.info("GPU info:\n%s", result.stdout.strip())
+            else:
+                logger.warning("Could not query GPU product name via rocm-smi")
+
+            # Get VRAM info
+            result = subprocess.run(
+                "rocm-smi --showmeminfo vram",
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if result.returncode == 0:
+                logger.info("VRAM info:\n%s", result.stdout.strip())
+
+            # Get HIP version
+            result = subprocess.run(
+                "hipconfig --version",
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if result.returncode == 0:
+                logger.info("HIP version: %s", result.stdout.strip())
+            else:
+                logger.warning("Could not determine HIP version")
+        except Exception as e:
+            logger.debug("GPU status logging skipped: %s", e)
 
 
 # ──────────────────────────────────────────────────────────────────
