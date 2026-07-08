@@ -15,7 +15,9 @@ echo ""
 
 # 1. Force clean reinstall of PyTorch with ROCm support
 echo "[1/4] Installing ROCm-compatible PyTorch..."
-echo "  ↓ Uninstalling any existing CUDA/other PyTorch versions to prevent conflicts..."
+echo "  ↓ Purging any apt-installed PyTorch packages to prevent conflicts..."
+apt-get remove -y python3-torch python3-torchvision python3-torchaudio python3-typing-extensions 2>/dev/null || true
+echo "  ↓ Uninstalling any existing pip PyTorch versions..."
 pip uninstall -y --break-system-packages torch torchvision torchaudio || true
 echo "  ↓ Installing PyTorch + torchvision + torchaudio (ROCm support)..."
 pip install --break-system-packages --ignore-installed torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.2
