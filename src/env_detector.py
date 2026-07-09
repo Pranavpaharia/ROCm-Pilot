@@ -255,7 +255,7 @@ def detect_gpu_utilization() -> Dict:
     Returns an empty dict on failure.
     """
     result: Dict = {}
-    raw = _run_cmd('rocm-smi --showuse --showmemuse --showtemp --json 2>/dev/null')
+    raw = _run_cmd('rocm-smi --showuse --showmemuse --showtemp --showmeminfo vram --json 2>/dev/null')
     if not raw:
         logger.debug("rocm-smi utilization query returned no output")
         return result
@@ -273,11 +273,21 @@ def detect_gpu_utilization() -> Dict:
 
         # Extract GPU usage percentage
         gpu_use = card_data.get('GPU use (%)', card_data.get('GPU Usage (%)', None))
-        # Extract memory usage percentage
-        mem_use = card_data.get('GPU memory use (%)', card_data.get('GPU Memory Usage (%)', None))
-        # Extract temperature (edge)
-        temperature = card_data.get('Temperature (Sensor edge) (C)',
-                                    card_data.get('Temperature (edge) (C)', None))
+        # Extract memory usage percentage (with VRAM% fallback for VF)
+        mem_use = (
+            card_data.get('GPU memory use (%)') or
+            card_data.get('GPU Memory Usage (%)') or
+            card_data.get('GPU Memory Allocated (VRAM%)') or
+            None
+        )
+        # Extract temperature (with junction/memory fallback for VF)
+        temperature = (
+            card_data.get('Temperature (Sensor edge) (C)') or
+            card_data.get('Temperature (edge) (C)') or
+            card_data.get('Temperature (Sensor junction) (C)') or
+            card_data.get('Temperature (Sensor memory) (C)') or
+            None
+        )
 
         # VRAM totals — try common key patterns
         vram_total = card_data.get('VRAM Total Memory (B)',
@@ -322,47 +332,57 @@ def detect_gpu_processes() -> List[Dict]:
     """
     processes: List[Dict] = []
 
-    # Try --showpidgpus first (more detail), fall back to --showpids
-    raw = _run_cmd('rocm-smi --showpidgpus 2>/dev/null')
+    # Use KFD processes information from --showpids (clean tabular format)
+    raw = _run_cmd('rocm-smi --showpids 2>/dev/null')
     if not raw:
-        raw = _run_cmd('rocm-smi --showpids 2>/dev/null')
+        # Fall back to --showpidgpus if --showpids is not available
+        raw = _run_cmd('rocm-smi --showpidgpus 2>/dev/null')
     if not raw:
         logger.debug("rocm-smi process query returned no output")
         return processes
 
-    # Parse tabular output — typical columns:
-    #   PID  GPU  VRAM Usage  (or similar)
-    # Lines with purely dashes or headers are skipped.
+    # Parse tabular output
     for line in raw.strip().split('\n'):
         line = line.strip()
-        if not line or line.startswith('=') or line.startswith('-'):
+        if not line or line.startswith('=') or line.startswith('-') or line.startswith('KFD'):
             continue
-        # Skip header-like rows
         lower = line.lower()
-        if 'pid' in lower and ('gpu' in lower or 'vram' in lower):
+        if 'pid' in lower and ('process' in lower or 'gpu' in lower):
             continue
 
         parts = line.split()
         if len(parts) < 1:
             continue
 
-        # First token should be PID (numeric)
         try:
             pid = int(parts[0])
         except ValueError:
             continue
 
-        gpu_id = parts[1] if len(parts) > 1 else 'N/A'
-        vram_usage = parts[2] if len(parts) > 2 else 'N/A'
+        # In --showpids, the structure is:
+        # PID   PROCESS NAME   GPU(s)   VRAM USED   SDMA USED   CU OCCUPANCY
+        # e.g.: 8300   python3   1   17925210112   0   0
+        process_name = parts[1] if len(parts) > 1 else 'unknown'
+        gpu_id = parts[2] if len(parts) > 2 else 'N/A'
+        vram_bytes = parts[3] if len(parts) > 3 else '0'
 
-        # Resolve process name from /proc or ps
-        proc_name = _resolve_process_name(pid)
+        # Format VRAM usage to MB for readability
+        try:
+            vram_mb = round(float(vram_bytes) / (1024 * 1024), 1)
+            vram_usage = f"{vram_mb} MB"
+        except (ValueError, TypeError):
+            vram_usage = vram_bytes
+
+        # Format GPU ID to cardN
+        gpu_str = gpu_id
+        if gpu_id != 'N/A' and not gpu_id.startswith('card'):
+            gpu_str = f"card{gpu_id}"
 
         processes.append({
             'pid': pid,
-            'gpu_id': gpu_id,
+            'gpu_id': gpu_str,
             'vram_usage': vram_usage,
-            'process_name': proc_name,
+            'process_name': process_name,
         })
 
     logger.debug("Detected %d GPU process(es)", len(processes))
