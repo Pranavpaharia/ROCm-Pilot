@@ -38,8 +38,17 @@ class CrossEncoderReranker:
             self.MODEL_NAME,
             self._device,
         )
-        self._model = CrossEncoder(self.MODEL_NAME, device=self._device)
-        logger.info("Cross-Encoder model loaded successfully on '%s'", self._device)
+        try:
+            self._model = CrossEncoder(self.MODEL_NAME, device=self._device)
+            logger.info("Cross-Encoder model loaded successfully on '%s'", self._device)
+        except Exception as e:
+            if 'out of memory' in str(e).lower() or 'oom' in str(e).lower():
+                logger.warning(f"GPU OOM when loading Cross-Encoder. Falling back to CPU: {e}")
+                self._device = "cpu"
+                self._model = CrossEncoder(self.MODEL_NAME, device=self._device)
+                logger.info("Cross-Encoder model loaded successfully on CPU (Fallback)")
+            else:
+                raise e
 
     # -- public API ---------------------------------------------------------
     def rerank(

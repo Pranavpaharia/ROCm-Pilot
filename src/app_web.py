@@ -92,15 +92,22 @@ class WebAgent:
         # Load embedding model
         try:
             from sentence_transformers import SentenceTransformer
-            self.embedding_model = SentenceTransformer(
-                'BAAI/bge-large-en-v1.5',
-            )
             import torch
-            if torch.cuda.is_available():
-                self.embedding_model = self.embedding_model.to('cuda')
-            print("✅ Embedding model loaded")
-        except Exception:
-            logger.warning("Embedding model unavailable — using ChromaDB defaults")
+            
+            # Try to load on GPU first
+            device = 'cuda' if torch.cuda.is_available() else 'cpu'
+            try:
+                self.embedding_model = SentenceTransformer('BAAI/bge-large-en-v1.5', device=device)
+                print(f"✅ Embedding model loaded on {device.upper()}")
+            except Exception as e:
+                if 'out of memory' in str(e).lower() or 'oom' in str(e).lower():
+                    logger.warning(f"GPU OOM when loading embedding model. Falling back to CPU: {e}")
+                    self.embedding_model = SentenceTransformer('BAAI/bge-large-en-v1.5', device='cpu')
+                    print("✅ Embedding model loaded on CPU (Fallback)")
+                else:
+                    raise e
+        except Exception as e:
+            logger.error(f"Failed to load embedding model: {e}")
 
         # Detect environment
         logger.info("Detecting AMD hardware environment...")
