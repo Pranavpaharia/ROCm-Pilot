@@ -165,7 +165,7 @@ class WebAgent:
                 "LOCAL_MODEL_ID", "Qwen/Qwen2.5-7B-Instruct"
             )
         else:
-            self.model_name = "accounts/fireworks/models/deepseek-v2-pro"
+            self.model_name = "accounts/fireworks/models/deepseek-v4-pro"
         self._init_provider()
 
     def set_remote_env(self, json_text: str) -> str:
@@ -695,14 +695,14 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
                     )
                     cloud_model_dropdown = gr.Dropdown(
                         choices=[
-                            "accounts/fireworks/models/deepseek-v2-pro",
-                            "accounts/fireworks/models/deepseek-v2-turbo",
-                            "accounts/fireworks/models/deepseek-v2-flash",
+                            "accounts/fireworks/models/deepseek-v4-pro",
                             "accounts/fireworks/models/glm-5p2",
                             "accounts/fireworks/models/glm-5p1",
+                            "accounts/fireworks/models/kimi-k2p6",
+                            "accounts/fireworks/models/kimi-k2p5",
                             "accounts/fireworks/models/gpt-oss-120b"
                         ],
-                        value="accounts/fireworks/models/deepseek-v2-pro",
+                        value="accounts/fireworks/models/deepseek-v4-pro",
                         label="Cloud Model (Fireworks)",
                         visible=True,
                         interactive=True,
