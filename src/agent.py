@@ -11,8 +11,8 @@ from typing import Optional, List, Dict, Callable
 from pathlib import Path
 
 from src.env_detector import detect_environment, format_env_context
-from src.retriever import get_retriever, retrieve, format_context, smart_retrieve
-from src.llm_provider import get_provider, FireworksProvider
+from src.retriever import get_retriever, retrieve, format_context, smart_retrieve, classify_hardware_intent
+from src.llm_provider import get_provider
 
 
 # ──────────────────────────────────────────────────────────────────
@@ -309,8 +309,10 @@ class RocmPilotAgent:
         try:
             from sentence_transformers import SentenceTransformer
             self.embedding_model = SentenceTransformer(
-                'sentence-transformers/all-MiniLM-L6-v2',
+                'BAAI/bge-large-en-v1.5',
             )
+            if torch.cuda.is_available():
+                self.embedding_model = self.embedding_model.to('cuda')
             print("✅ Embedding model loaded")
         except Exception:
             print("⚠️  Embedding model unavailable — using ChromaDB defaults")
@@ -358,6 +360,7 @@ class RocmPilotAgent:
             The agent's full response string.
         """
         # Step 1 — Smart retrieval (structured + semantic)
+        hw_target = classify_hardware_intent(question, self.env_context)
         context = smart_retrieve(
             query=question,
             collection=self.collection,
@@ -365,6 +368,7 @@ class RocmPilotAgent:
             embedding_model=self.embedding_model,
             top_k=top_k,
             doc_type_filter=doc_type_filter,
+            hardware_target_filter=hw_target,
         )
 
         # Step 2 — Assemble the system message with tool descriptions
@@ -583,6 +587,8 @@ class RocmPilotAgent:
 def interactive_session(
     db_path: str = 'data/chroma_db',
     auto_approve_tools: bool = False,
+    provider_type: str = "cloud",
+    model: str = "accounts/fireworks/models/deepseek-v4-pro",
 ):
     """Launch an interactive terminal session with ROCm-Pilot."""
     print("=" * 60)
@@ -592,6 +598,8 @@ def interactive_session(
 
     agent = RocmPilotAgent(
         db_path=db_path,
+        provider_type=provider_type,
+        model=model,
         auto_approve_tools=auto_approve_tools,
     )
 
@@ -661,6 +669,17 @@ if __name__ == '__main__':
         default='data/gpu_database.json',
         help='Path to the GPU compatibility database (default: data/gpu_database.json)',
     )
+    parser.add_argument(
+        '--provider',
+        default='cloud',
+        choices=['cloud', 'local_gpu'],
+        help='LLM provider to use (cloud or local_gpu)',
+    )
+    parser.add_argument(
+        '--model',
+        default=None,
+        help='Model identifier to use (overrides defaults)',
+    )
     args = parser.parse_args()
 
     # Optionally refresh GPU data from live AMD docs
@@ -675,7 +694,13 @@ if __name__ == '__main__':
         except Exception as e:
             print(f"⚠️  Live scraping failed: {e} — using cached data")
 
+    model_arg = args.model
+    if not model_arg:
+        model_arg = "Qwen/Qwen2.5-72B-Instruct" if args.provider == "local_gpu" else "accounts/fireworks/models/deepseek-v4-pro"
+
     interactive_session(
         db_path=args.db_path,
         auto_approve_tools=args.auto_approve,
+        provider_type=args.provider,
+        model=model_arg,
     )

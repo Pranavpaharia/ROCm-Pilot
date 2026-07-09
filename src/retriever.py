@@ -137,6 +137,7 @@ def retrieve(
     embedding_model=None,
     top_k: int = 8,
     doc_type_filter: Optional[str] = None,
+    hardware_target_filter: Optional[str] = None,
     use_reranker: bool = True,
 ) -> List[Dict]:
     """
@@ -162,9 +163,18 @@ def retrieve(
     # Determine how many candidates to fetch from ChromaDB
     fetch_k = top_k * 3 if use_reranker else top_k
 
-    where_filter = None
+    where_filters = []
     if doc_type_filter:
-        where_filter = {"doc_type": doc_type_filter}
+        where_filters.append({"doc_type": doc_type_filter})
+    if hardware_target_filter:
+        where_filters.append({"hardware_target": hardware_target_filter})
+        
+    if len(where_filters) == 1:
+        where_filter = where_filters[0]
+    elif len(where_filters) > 1:
+        where_filter = {"$and": where_filters}
+    else:
+        where_filter = None
 
     chroma_start = time.perf_counter()
 
@@ -320,6 +330,26 @@ def classify_query(query: str) -> str:
     return 'semantic'
 
 
+def classify_hardware_intent(query: str, env_context: str = "") -> Optional[str]:
+    """Detect if the user is asking about a specific class of hardware."""
+    query_lower = query.lower()
+    env_lower = env_context.lower()
+    
+    # Explicit query overrides
+    if any(kw in query_lower for kw in ['laptop', 'npu', 'ryzen', 'strix']):
+        return "Ryzen AI"
+    if any(kw in query_lower for kw in ['instinct', 'mi300', 'mi250', 'server', 'datacenter']):
+        return "Instinct/Radeon"
+        
+    # Implicit environment fallbacks
+    if 'ryzen' in env_lower or 'npu' in env_lower:
+        return "Ryzen AI"
+    if 'instinct' in env_lower or 'gfx9' in env_lower:
+        return "Instinct/Radeon"
+        
+    return None
+
+
 def smart_retrieve(
     query: str,
     collection,
@@ -327,6 +357,7 @@ def smart_retrieve(
     embedding_model=None,
     top_k: int = 8,
     doc_type_filter: Optional[str] = None,
+    hardware_target_filter: Optional[str] = None,
     use_reranker: bool = True,
 ) -> Dict:
     """
@@ -455,6 +486,7 @@ def smart_retrieve(
             embedding_model=embedding_model,
             top_k=top_k,
             doc_type_filter=doc_type_filter,
+            hardware_target_filter=hardware_target_filter,
             use_reranker=use_reranker,
         )
         doc_context = format_context(results)

@@ -48,6 +48,7 @@ echo "  ↓ Installing additional dependencies..."
     chromadb \
     sentence-transformers \
     "transformers>=4.45.2" \
+    accelerate \
     openai tqdm ipywidgets \
     beautifulsoup4 lxml gradio
 echo "✅ Dependencies installed"
@@ -75,6 +76,8 @@ clone_if_missing "https://github.com/ROCm/gpuaidev.git" "data/raw_docs/gpuaidev"
 clone_if_missing "https://github.com/ROCm/HIP.git" "data/raw_docs/HIP"
 clone_if_missing "https://github.com/ROCm/MIOpen.git" "data/raw_docs/MIOpen"
 clone_if_missing "https://github.com/ROCm/AMDMIGraphX.git" "data/raw_docs/AMDMIGraphX"
+clone_if_missing "https://github.com/amd/RyzenAI-SW.git" "data/raw_docs/ryzen-ai-sw"
+clone_if_missing "https://github.com/lemonade-sdk/lemonade.git" "data/raw_docs/lemonade"
 
 echo "✅ Documentation repos ready"
 echo ""

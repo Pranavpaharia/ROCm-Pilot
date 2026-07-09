@@ -9,9 +9,9 @@ from typing import List, Dict, Optional, Tuple
 from tqdm import tqdm
 
 
-# Placeholder token for tables during chunking
+# Placeholder tokens for blocks during chunking
 TABLE_PLACEHOLDER = "<<TABLE_BLOCK_{idx}>>"
-
+CODE_PLACEHOLDER = "<<CODE_BLOCK_{idx}>>"
 
 def _split_by_headers(content: str, file_ext: str) -> List[Dict[str, str]]:
     """Split document content by markdown or RST headers into sections."""
@@ -109,6 +109,43 @@ def _detect_and_replace_tables(text: str) -> Tuple[str, List[Dict]]:
     return '\n'.join(result_lines), tables_found
 
 
+def _detect_and_replace_code_blocks(text: str) -> Tuple[str, List[Dict]]:
+    """Detect markdown code blocks (```...```) and replace with placeholders."""
+    blocks_found = []
+    lines = text.split('\n')
+    result_lines = []
+    i = 0
+    block_idx = 0
+    
+    while i < len(lines):
+        line = lines[i]
+        if line.strip().startswith('```'):
+            start_i = i
+            block_lines = [line]
+            i += 1
+            while i < len(lines) and not lines[i].strip().startswith('```'):
+                block_lines.append(lines[i])
+                i += 1
+            if i < len(lines):
+                block_lines.append(lines[i]) # closing tag
+                i += 1
+            
+            raw = '\n'.join(block_lines)
+            placeholder = CODE_PLACEHOLDER.format(idx=block_idx)
+            result_lines.append(placeholder)
+            blocks_found.append({
+                'placeholder': placeholder,
+                'raw': raw,
+                'index': block_idx,
+            })
+            block_idx += 1
+        else:
+            result_lines.append(line)
+            i += 1
+            
+    return '\n'.join(result_lines), blocks_found
+
+
 def _parse_table_row(line: str) -> List[str]:
     """Parse a single markdown table row into cell values."""
     line = line.strip()
@@ -146,15 +183,22 @@ def _format_table_for_embedding(table: Dict) -> str:
     return '\n'.join(lines)
 
 
-def _restore_tables_in_chunk(chunk_text: str, tables: List[Dict]) -> str:
-    """
-    Replace table placeholders in a chunk with formatted table text.
-    """
+    return chunk_text
+
+
+def _restore_blocks_in_chunk(chunk_text: str, tables: List[Dict], code_blocks: List[Dict]) -> str:
+    """Replace placeholders in a chunk with original content."""
     for table in tables:
         placeholder = table['placeholder']
         if placeholder in chunk_text:
             formatted = _format_table_for_embedding(table)
             chunk_text = chunk_text.replace(placeholder, f"\n{formatted}\n")
+            
+    for cb in code_blocks:
+        placeholder = cb['placeholder']
+        if placeholder in chunk_text:
+            chunk_text = chunk_text.replace(placeholder, f"\n{cb['raw']}\n")
+            
     return chunk_text
 
 
@@ -179,12 +223,76 @@ def _chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str
     return chunks
 
 
-def _chunk_text_preserving_tables(
+def _chunk_text_preserving_blocks(
     text: str,
     tables: List[Dict],
+    code_blocks: List[Dict],
     chunk_size: int = 500,
     overlap: int = 50,
 ) -> List[str]:
+    """Split text into chunks while keeping table and code blocks intact."""
+    if not tables and not code_blocks:
+        return _chunk_text(text, chunk_size, overlap)
+        
+    segments = []
+    remaining = text
+    
+    # Combine tables and code blocks to sort by placeholder position
+    all_blocks = []
+    for t in tables:
+        all_blocks.append({'type': 'table', 'placeholder': t['placeholder'], 'content': t, 'index': remaining.find(t['placeholder'])})
+    for c in code_blocks:
+        all_blocks.append({'type': 'code', 'placeholder': c['placeholder'], 'content': c, 'index': remaining.find(c['placeholder'])})
+        
+    # Re-find exact indices just to be safe
+    all_blocks.sort(key=lambda x: remaining.find(x['placeholder']) if remaining.find(x['placeholder']) != -1 else float('inf'))
+    
+    for block in all_blocks:
+        placeholder = block['placeholder']
+        if placeholder in remaining:
+            before, after = remaining.split(placeholder, 1)
+            if before.strip():
+                segments.append({'type': 'text', 'content': before})
+            segments.append(block)
+            remaining = after
+            
+    if remaining.strip():
+        segments.append({'type': 'text', 'content': remaining})
+        
+    chunks = []
+    current_chunk_words = []
+    
+    for segment in segments:
+        if segment['type'] in ('table', 'code'):
+            formatted = _format_table_for_embedding(segment['content']) if segment['type'] == 'table' else segment['content']['raw']
+            block_words = len(formatted.split())
+            if block_words > chunk_size:
+                if current_chunk_words:
+                    chunks.append(' '.join(current_chunk_words))
+                    current_chunk_words = []
+                chunks.append(formatted)
+            elif len(current_chunk_words) + block_words > chunk_size:
+                if current_chunk_words:
+                    chunks.append(' '.join(current_chunk_words))
+                current_chunk_words = formatted.split()
+            else:
+                current_chunk_words.extend(formatted.split())
+        else:
+            text_content = segment['content']
+            text_chunks = _chunk_text(text_content, chunk_size, overlap)
+            for i, tc in enumerate(text_chunks):
+                tc_words = tc.split()
+                if len(current_chunk_words) + len(tc_words) <= chunk_size:
+                    current_chunk_words.extend(tc_words)
+                else:
+                    if current_chunk_words:
+                        chunks.append(' '.join(current_chunk_words))
+                    current_chunk_words = tc_words
+                    
+    if current_chunk_words:
+        chunks.append(' '.join(current_chunk_words))
+        
+    return chunks
     """
     Split text into chunks while keeping table blocks intact.
     
@@ -304,17 +412,18 @@ def chunk_documents(
         sections = _split_by_headers(content, file_ext)
 
         for section in sections:
-            # Detect and replace tables with placeholders
+            # Detect and replace tables and code blocks with placeholders
             modified_text, tables = _detect_and_replace_tables(section['content'])
+            modified_text, code_blocks = _detect_and_replace_code_blocks(modified_text)
             
-            # Chunk with table preservation
-            text_chunks = _chunk_text_preserving_tables(
-                modified_text, tables, chunk_size, overlap,
+            # Chunk with block preservation
+            text_chunks = _chunk_text_preserving_blocks(
+                modified_text, tables, code_blocks, chunk_size, overlap,
             )
 
             for i, chunk_text in enumerate(text_chunks):
-                # Restore any table placeholders with formatted text
-                chunk_text = _restore_tables_in_chunk(chunk_text, tables)
+                # Restore placeholders
+                chunk_text = _restore_blocks_in_chunk(chunk_text, tables, code_blocks)
                 
                 # Skip very short chunks (< 20 words)
                 if len(chunk_text.split()) < 20:
@@ -332,6 +441,8 @@ def chunk_documents(
                     'source_file': doc['source_file'],
                     'source_url': doc['source_url'],
                     'doc_type': doc['doc_type'],
+                    'hardware_target': doc.get('hardware_target', 'General AMD'),
+                    'category': doc.get('category', 'General'),
                     'section_title': section['title'],
                     'chunk_index': i,
                     'has_table': has_table,

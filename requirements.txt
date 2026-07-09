@@ -10,6 +10,7 @@ openai>=1.0.0
 # Document processing
 requests>=2.31.0
 tqdm>=4.65.0
+langchain-text-splitters>=0.2.0
 
 # Live web scraping (for AMD docs)
 beautifulsoup4>=4.12.0

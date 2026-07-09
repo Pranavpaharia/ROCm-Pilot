@@ -93,9 +93,12 @@ class WebAgent:
         try:
             from sentence_transformers import SentenceTransformer
             self.embedding_model = SentenceTransformer(
-                'sentence-transformers/all-MiniLM-L6-v2',
+                'BAAI/bge-large-en-v1.5',
             )
-            logger.info("Embedding model loaded")
+            import torch
+            if torch.cuda.is_available():
+                self.embedding_model = self.embedding_model.to('cuda')
+            print("✅ Embedding model loaded")
         except Exception:
             logger.warning("Embedding model unavailable — using ChromaDB defaults")
 
@@ -448,24 +451,48 @@ class WebAgent:
         self.conversation_history.append({"role": "assistant", "content": response_text})
 
     def _format_sources(self, results: List[Dict]) -> str:
-        """Format retrieval results as markdown for the sources panel."""
+        """Format retrieval results as markdown/HTML for the sources panel."""
         if not results:
-            return "*No sources retrieved.*"
+            return "<div style='color: #94a3b8; font-style: italic; padding: 10px;'>No sources retrieved.</div>"
 
-        lines = ["## Retrieved Sources\n"]
+        html_blocks = []
         for i, r in enumerate(results, 1):
             m = r.get('metadata', {})
-            lines.append(f"### Source {i}")
-            lines.append(f"**File:** `{m.get('source_repo', '?')}/{m.get('source_file', '?')}`")
-            lines.append(f"**Type:** {m.get('doc_type', '?')} | **Section:** {m.get('section_title', '?')}")
+            repo = m.get('source_repo', '?')
+            file = m.get('source_file', '?')
+            doc_type = m.get('doc_type', '?').upper()
+            section = m.get('section_title', '?')
             url = m.get('source_url', '')
+            text_preview = r.get('text', '').strip()
+            
+            # Limit the preview length to 350 chars for readability
+            if len(text_preview) > 350:
+                text_preview = text_preview[:350] + "..."
+            
+            url_btn = ""
             if url:
-                lines.append(f"**URL:** [{url}]({url})")
-            text_preview = r.get('text', '')[:200]
-            lines.append(f"\n> {text_preview}...")
-            lines.append("")
+                url_btn = f'<a href="{url}" target="_blank" style="display: inline-flex; align-items: center; color: #ed1c24; text-decoration: none; font-size: 0.82em; font-weight: 600; transition: color 0.2s ease;">View Original Source ↗</a>'
 
-        return '\n'.join(lines)
+            block = f"""<div style="border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 14px; margin-bottom: 12px; background: rgba(255, 255, 255, 0.015); font-family: system-ui, -apple-system, sans-serif;">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 6px; margin-bottom: 8px;">
+        <span style="font-weight: 700; color: #f1f5f9; font-size: 0.9em; letter-spacing: 0.5px;">SOURCE {i}</span>
+        <span style="font-size: 0.72em; font-weight: 600; color: #ed1c24; background: rgba(237, 28, 36, 0.1); padding: 2px 6px; border-radius: 4px; letter-spacing: 0.5px;">{doc_type}</span>
+    </div>
+    
+    <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.82em; color: #94a3b8; margin-bottom: 8px;">
+        <div><strong style="color: #cbd5e1;">File:</strong> <code style="background: rgba(0, 0, 0, 0.3); padding: 2px 4px; border-radius: 4px; font-family: monospace; color: #e2e8f0; font-size: 0.88em;">{repo}/{file}</code></div>
+        <div><strong style="color: #cbd5e1;">Section:</strong> <span style="color: #f1f5f9; font-weight: 500;">{section}</span></div>
+    </div>
+    
+    <div style="background: rgba(0, 0, 0, 0.15); border-left: 3px solid #ed1c24; padding: 8px 10px; margin-bottom: 8px; font-size: 0.82em; line-height: 1.45; color: #cbd5e1; border-radius: 0 4px 4px 0; font-style: italic;">
+        "{text_preview}"
+    </div>
+    
+    {url_btn}
+</div>"""
+            html_blocks.append(block)
+
+        return '\n'.join(html_blocks)
 
     def get_status_md(self) -> str:
         """Return markdown for the hardware status panel."""
@@ -525,6 +552,22 @@ class WebAgent:
         processes = detect_gpu_processes()
         return format_gpu_monitor(utilization, processes)
 
+    def get_db_stats_md(self) -> str:
+        """Return markdown for the database stats panel."""
+        if not self._initialized:
+            return "*Send a message to initialize database connection.*"
+            
+        doc_count = self.collection.count() if self.collection else 0
+        
+        lines = [
+            f"**Total Document Chunks:** `{doc_count:,}`",
+            "**Vector Database:** `ChromaDB`",
+            "**Embedding Model:** `BAAI/bge-large-en-v1.5`",
+            "**Vector Dimensions:** `1024`",
+            "**Compute Pipeline:** `AMD ROCm + SentenceTransformers (GPU)`",
+        ]
+        return '\n'.join(lines)
+
     def clear_history(self):
         """Reset conversation history."""
         self.conversation_history.clear()
@@ -535,75 +578,69 @@ class WebAgent:
 # Gradio UI
 # ──────────────────────────────────────────────────────────────────
 
+# Custom CSS for AMD-themed dark interface
+custom_css = """
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+.gradio-container {
+    font-family: 'Inter', 'Segoe UI', sans-serif !important;
+}
+#header {
+    background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 30%, #16213e 60%, #0f3460 100%);
+    color: #ed1c24;
+    padding: 24px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    text-align: center;
+    border: 1px solid rgba(237, 28, 36, 0.2);
+    box-shadow: 0 4px 20px rgba(237, 28, 36, 0.1);
+}
+#header h1 {
+    color: #ed1c24;
+    margin: 0;
+    font-size: 2.2em;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+#header p {
+    color: #94a3b8;
+    margin: 8px 0 0 0;
+    font-size: 0.95em;
+}
+.status-panel {
+    background: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 100%);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 16px;
+}
+.monitor-panel {
+    background: linear-gradient(180deg, #0a1628 0%, #0f1d32 100%);
+    border: 1px solid rgba(237, 28, 36, 0.15);
+    border-radius: 10px;
+    padding: 16px;
+}
+.sources-panel {
+    max-height: 400px;
+    overflow-y: auto;
+}
+.amd-badge {
+    background: linear-gradient(135deg, #ed1c24, #c4161d);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75em;
+    font-weight: 600;
+}
+footer { display: none !important; }
+"""
+
 def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
     """Build the Gradio Blocks interface."""
 
     agent = WebAgent(db_path=db_path)
 
-    # Custom CSS for AMD-themed dark interface
-    custom_css = """
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-    .gradio-container {
-        font-family: 'Inter', 'Segoe UI', sans-serif !important;
-    }
-    #header {
-        background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 30%, #16213e 60%, #0f3460 100%);
-        color: #ed1c24;
-        padding: 24px;
-        border-radius: 12px;
-        margin-bottom: 16px;
-        text-align: center;
-        border: 1px solid rgba(237, 28, 36, 0.2);
-        box-shadow: 0 4px 20px rgba(237, 28, 36, 0.1);
-    }
-    #header h1 {
-        color: #ed1c24;
-        margin: 0;
-        font-size: 2.2em;
-        font-weight: 700;
-        letter-spacing: -0.02em;
-    }
-    #header p {
-        color: #94a3b8;
-        margin: 8px 0 0 0;
-        font-size: 0.95em;
-    }
-    .status-panel {
-        background: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 100%);
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 10px;
-        padding: 16px;
-    }
-    .monitor-panel {
-        background: linear-gradient(180deg, #0a1628 0%, #0f1d32 100%);
-        border: 1px solid rgba(237, 28, 36, 0.15);
-        border-radius: 10px;
-        padding: 16px;
-    }
-    .sources-panel {
-        max-height: 400px;
-        overflow-y: auto;
-    }
-    .amd-badge {
-        background: linear-gradient(135deg, #ed1c24, #c4161d);
-        color: white;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 0.75em;
-        font-weight: 600;
-    }
-    footer { display: none !important; }
-    """
-
     with gr.Blocks(
         title="ROCm-Pilot -- AI-Powered AMD Setup Assistant",
-        css=custom_css,
-        theme=gr.themes.Soft(
-            primary_hue="red",
-            secondary_hue="slate",
-            neutral_hue="slate",
-        ),
     ) as demo:
 
         # Header
@@ -642,15 +679,41 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
             with gr.Column(scale=1):
 
                 # LLM Provider Selector
-                with gr.Accordion("LLM Provider", open=True):
+                with gr.Accordion("LLM Provider & Models", open=True):
                     provider_radio = gr.Radio(
                         choices=["cloud", "local"],
                         value="cloud",
                         label="Inference Mode",
-                        info="Cloud = Fireworks AI (DeepSeek) | Local = AMD GPU (Qwen 2.5)",
+                        info="Cloud = Fireworks API | Local = AMD GPU",
+                    )
+                    cloud_model_dropdown = gr.Dropdown(
+                        choices=[
+                            "accounts/fireworks/models/deepseek-v4-pro",
+                            "accounts/fireworks/models/deepseek-v4-turbo",
+                            "accounts/fireworks/models/deepseek-v4-flash",
+                            "accounts/fireworks/models/kimi-k2p6",
+                            "accounts/fireworks/models/kimi-k2p7-code",
+                            "accounts/fireworks/models/glm-5p2"
+                        ],
+                        value="accounts/fireworks/models/deepseek-v4-pro",
+                        label="Cloud Model (Fireworks)",
+                        visible=True,
+                        interactive=True,
+                    )
+                    local_model_dropdown = gr.Dropdown(
+                        choices=[
+                            "Qwen/Qwen2.5-Coder-32B-Instruct",
+                            "Qwen/Qwen2.5-72B-Instruct",
+                            "meta-llama/Meta-Llama-3.1-70B-Instruct",
+                            "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct"
+                        ],
+                        value="Qwen/Qwen2.5-Coder-32B-Instruct",
+                        label="Local Model (MI300X VRAM)",
+                        visible=False,
+                        interactive=True,
                     )
                     provider_status = gr.Markdown(
-                        "Using **Cloud** provider (Fireworks AI)",
+                        "Using **Cloud** provider: `accounts/fireworks/models/deepseek-v4-pro`",
                     )
 
                 # System Status
@@ -659,6 +722,13 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
                     label="System Status",
                     elem_classes=["status-panel"],
                 )
+                
+                # Knowledge Base Stats
+                with gr.Accordion("Knowledge Base Stats", open=True):
+                    db_stats_md = gr.Markdown(
+                        value="*Send a message to initialize database connection.*",
+                        elem_classes=["status-panel"],
+                    )
 
                 # GPU Monitor
                 with gr.Accordion("AMD GPU Monitor", open=True):
@@ -694,8 +764,8 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
         with gr.Row():
             with gr.Column(scale=1):
                 with gr.Accordion("Retrieved Source References", open=True):
-                    sources_md = gr.Markdown(
-                        value="*References will appear here after you send a message.*",
+                    sources_md = gr.HTML(
+                        value="<div style='color: #94a3b8; font-style: italic; padding: 10px;'>References will appear here after you send a message.</div>",
                         elem_classes=["sources-panel"],
                     )
 
@@ -718,7 +788,7 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
         def user_submit(message, history):
             """Handle user message submission with streaming."""
             if not message.strip():
-                yield "", history, gr.update(), gr.update(), gr.update()
+                yield "", history, gr.update(), gr.update(), gr.update(), gr.update()
                 return
 
             # Add user message to display immediately
@@ -726,7 +796,7 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
             history.append({"role": "user", "content": message})
 
             # Yield first to clear textbox and show the user's message immediately!
-            yield "", history, agent.get_status_md(), "", agent.get_gpu_monitor_md()
+            yield "", history, agent.get_status_md(), agent.get_db_stats_md(), "", agent.get_gpu_monitor_md()
 
             # Add assistant placeholder response
             history.append({"role": "assistant", "content": ""})
@@ -734,7 +804,7 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
             # Stream response
             for response_text, sources in agent.respond_stream(message, history[:-1]):
                 history[-1]["content"] = response_text
-                yield "", history, agent.get_status_md(), sources, agent.get_gpu_monitor_md()
+                yield "", history, agent.get_status_md(), agent.get_db_stats_md(), sources, agent.get_gpu_monitor_md()
 
         def handle_clear():
             """Handle clear history button."""
@@ -745,12 +815,41 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
             """Refresh GPU monitor data."""
             return agent.get_gpu_monitor_md()
 
-        def handle_provider_switch(choice):
-            """Switch LLM provider."""
-            agent.switch_provider(choice)
-            if choice == "local":
-                return "Using **Local AMD GPU** provider (Qwen 2.5)"
-            return "Using **Cloud** provider (Fireworks AI)"
+        def handle_provider_switch(choice, cloud_model, local_model):
+            """Switch LLM provider and toggle dropdown visibility."""
+            is_cloud = (choice == "cloud")
+            model = cloud_model if is_cloud else local_model
+            
+            # Yield loading state first
+            loading_text = f"⏳ **Switching Provider:** Connecting to Cloud..." if is_cloud else f"⏳ **Downloading & Loading:** `{model}` (May take 1-2 minutes for huge models)..."
+            yield (
+                gr.update(visible=is_cloud),
+                gr.update(visible=not is_cloud),
+                loading_text
+            )
+            
+            agent.switch_provider(choice, model)
+            
+            status_text = f"Using **Cloud** provider: `{model}`" if is_cloud else f"Using **Local AMD GPU**: `{model}`"
+            yield (
+                gr.update(visible=is_cloud),
+                gr.update(visible=not is_cloud),
+                status_text
+            )
+            
+        def handle_model_change(choice, cloud_model, local_model):
+            """Handle model dropdown change."""
+            is_cloud = (choice == "cloud")
+            model = cloud_model if is_cloud else local_model
+            
+            # Yield loading state first
+            loading_text = f"⏳ **Connecting:** `{model}`..." if is_cloud else f"⏳ **Downloading & Loading:** `{model}` (May take 1-2 minutes for huge models)..."
+            yield loading_text
+            
+            agent.switch_provider(choice, model)
+            
+            status_text = f"Using **Cloud** provider: `{model}`" if is_cloud else f"Using **Local AMD GPU**: `{model}`"
+            yield status_text
 
         def handle_remote_submit(json_text):
             """Process pasted remote diagnostics JSON."""
@@ -760,12 +859,12 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
         msg.submit(
             user_submit,
             inputs=[msg, chatbot],
-            outputs=[msg, chatbot, status_md, sources_md, gpu_monitor_md],
+            outputs=[msg, chatbot, status_md, db_stats_md, sources_md, gpu_monitor_md],
         )
         submit_btn.click(
             user_submit,
             inputs=[msg, chatbot],
-            outputs=[msg, chatbot, status_md, sources_md, gpu_monitor_md],
+            outputs=[msg, chatbot, status_md, db_stats_md, sources_md, gpu_monitor_md],
         )
         clear_btn.click(
             handle_clear,
@@ -777,7 +876,17 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
         )
         provider_radio.change(
             handle_provider_switch,
-            inputs=[provider_radio],
+            inputs=[provider_radio, cloud_model_dropdown, local_model_dropdown],
+            outputs=[cloud_model_dropdown, local_model_dropdown, provider_status],
+        )
+        cloud_model_dropdown.change(
+            handle_model_change,
+            inputs=[provider_radio, cloud_model_dropdown, local_model_dropdown],
+            outputs=[provider_status],
+        )
+        local_model_dropdown.change(
+            handle_model_change,
+            inputs=[provider_radio, cloud_model_dropdown, local_model_dropdown],
             outputs=[provider_status],
         )
         remote_submit_btn.click(
@@ -826,4 +935,10 @@ if __name__ == '__main__':
         server_name="0.0.0.0",
         server_port=args.port,
         share=args.share,
+        css=custom_css,
+        theme=gr.themes.Soft(
+            primary_hue="red",
+            secondary_hue="slate",
+            neutral_hue="slate",
+        ),
     )

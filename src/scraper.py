@@ -26,7 +26,7 @@ SKIP_DIRS = {
     'site-packages', '_static', '_templates', '.eggs',
 }
 
-# Map repo directory names to their base URLs on rocm.docs.amd.com
+# Map repo directory names to their base URLs on rocm.docs.amd.com or github
 REPO_URL_MAP = {
     'ROCm': 'https://rocm.docs.amd.com/en/latest/',
     'rocm-install-on-linux': 'https://rocm.docs.amd.com/projects/install-on-linux/en/latest/',
@@ -35,6 +35,21 @@ REPO_URL_MAP = {
     'HIP': 'https://rocm.docs.amd.com/projects/HIP/en/latest/',
     'MIOpen': 'https://rocm.docs.amd.com/projects/MIOpen/en/latest/',
     'AMDMIGraphX': 'https://rocm.docs.amd.com/projects/AMDMIGraphX/en/latest/',
+    'ryzen-ai-sw': 'https://ryzenai.docs.amd.com/en/latest/',
+    'lemonade': 'https://github.com/lemonade-sdk/lemonade/blob/main/',
+}
+
+# Metadata Tags for Hardware Routing
+HARDWARE_TAG_MAP = {
+    'ROCm': {'hardware_target': 'Instinct/Radeon', 'category': 'Enterprise Compute'},
+    'rocm-install-on-linux': {'hardware_target': 'Instinct/Radeon', 'category': 'Installation'},
+    'rocm-blogs': {'hardware_target': 'General AMD', 'category': 'Blog'},
+    'gpuaidev': {'hardware_target': 'General AMD', 'category': 'Guide'},
+    'HIP': {'hardware_target': 'Instinct/Radeon', 'category': 'Programming'},
+    'MIOpen': {'hardware_target': 'Instinct/Radeon', 'category': 'Deep Learning'},
+    'AMDMIGraphX': {'hardware_target': 'Instinct/Radeon', 'category': 'Deep Learning'},
+    'ryzen-ai-sw': {'hardware_target': 'Ryzen AI', 'category': 'NPU'},
+    'lemonade': {'hardware_target': 'All AMD', 'category': 'SDK'},
 }
 
 
@@ -368,12 +383,17 @@ def collect_documents(raw_docs_dir: str) -> List[Dict]:
                     rst_tables = _extract_rst_tables(content)
                     tables.extend(rst_tables)
                 
+                # Get hardware tags
+                hardware_meta = HARDWARE_TAG_MAP.get(repo_name, {'hardware_target': 'General AMD', 'category': 'General'})
+
                 documents.append({
                     'content': content,
                     'source_repo': repo_name,
                     'source_file': rel_path,
                     'source_url': source_url,
                     'doc_type': classify_doc_type(rel_path),
+                    'hardware_target': hardware_meta['hardware_target'],
+                    'category': hardware_meta['category'],
                     'tables': tables,
                 })
 

@@ -1,0 +1,17 @@
+[Unit]
+Description=ROCm-Pilot Gradio Web UI Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/ROCm-Pilot
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/rocm/bin:/opt/rocm/opencl/bin"
+Environment="LD_LIBRARY_PATH=/opt/rocm/lib:/opt/rocm/lib64"
+Environment="HF_HUB_DISABLE_SYMLINKS_WARNING=1"
+ExecStart=/usr/bin/python3 -m src.app_web --port 7860
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

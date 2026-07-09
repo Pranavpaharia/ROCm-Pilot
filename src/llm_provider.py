@@ -16,14 +16,40 @@ class BaseLLMProvider:
         raise NotImplementedError
 
 
-class FireworksProvider(BaseLLMProvider):
-    def __init__(self, model: str):
-        self.model = model
-        from src.fireworks_client import chat
-        self.chat_func = chat
+class OpenAICompatibleProvider(BaseLLMProvider):
+    def __init__(self, model: Optional[str] = None):
+        import openai
+        
+        use_local = os.environ.get('USE_LOCAL_LEMONADE', 'true').lower() == 'true'
+        if use_local:
+            logger.info("Using Local Lemonade SDK LLM")
+            self.api_base = "http://localhost:8000/v1"
+            self.api_key = "not-needed"
+            self.model = model or "meta-llama/Meta-Llama-3-70B-Instruct"
+        else:
+            logger.info("Using Cloud Fireworks API LLM")
+            self.api_base = "https://api.fireworks.ai/inference/v1"
+            self.api_key = os.environ.get('FIREWORKS_API_KEY')
+            if not self.api_key:
+                raise ValueError("FIREWORKS_API_KEY environment variable is required when USE_LOCAL_LEMONADE=false")
+            self.model = model or "accounts/fireworks/models/deepseek-v4-pro"
+            
+        self.client = openai.OpenAI(base_url=self.api_base, api_key=self.api_key)
 
     def chat(self, messages: List[Dict], stream: bool = False) -> Union[str, Generator]:
-        return self.chat_func(messages=messages, model=self.model, stream=stream)
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            stream=stream
+        )
+        if stream:
+            def generate():
+                for chunk in response:
+                    if chunk.choices[0].delta.content:
+                        yield chunk.choices[0].delta.content
+            return generate()
+        else:
+            return response.choices[0].message.content
 
 
 class LocalGPUProvider(BaseLLMProvider):
@@ -177,6 +203,6 @@ def get_provider(provider_type: str, model: Optional[str] = None) -> BaseLLMProv
         ``LOCAL_MODEL_ID`` env-var / ``Qwen/Qwen2.5-7B-Instruct`` fallback.
         For *cloud* mode this is forwarded to ``FireworksProvider``.
     """
-    if provider_type == "local":
+    if provider_type in ("local", "local_gpu"):
         return LocalGPUProvider(model_id=model)
-    return FireworksProvider(model=model or "")
+    return OpenAICompatibleProvider(model=model)

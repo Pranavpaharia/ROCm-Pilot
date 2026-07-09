@@ -492,11 +492,22 @@ def format_gpu_monitor(utilization: Dict, processes: List[Dict]) -> str:
 
 
 def _progress_bar(pct: float, width: int = 20) -> str:
-    """Render a text progress bar: [████████░░░░░░░░░░░░]."""
+    """Render a text progress bar with color coding based on usage."""
     pct = max(0.0, min(100.0, pct))
     filled = int(round(width * pct / 100))
     empty = width - filled
-    return f'[{"█" * filled}{"░" * empty}]'
+    
+    if pct < 50:
+        color = "#10b981"  # Emerald Green (low usage)
+    elif pct < 85:
+        color = "#f59e0b"  # Amber/Yellow (medium usage)
+    else:
+        color = "#ef4444"  # Red (high usage)
+        
+    filled_str = "█" * filled
+    empty_str = "░" * empty
+    
+    return f'<span style="color: {color};">[{filled_str}{empty_str}]</span>'
 
 
 def detect_environment() -> Dict:
