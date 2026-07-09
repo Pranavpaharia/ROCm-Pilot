@@ -41,13 +41,13 @@ fi
 echo ""
 
 echo "  ↓ Purging potential conflicting packages..."
-"$PYTHON_BIN" -m pip uninstall -y transformers sentence-transformers chromadb 2>/dev/null || true
+"$PYTHON_BIN" -m pip uninstall -y sentence-transformers chromadb 2>/dev/null || true
 
 echo "  ↓ Installing additional dependencies..."
 "$PYTHON_BIN" -m pip install --break-system-packages \
     chromadb \
     sentence-transformers \
-    transformers==4.45.2 \
+    "transformers>=4.45.2" \
     openai tqdm ipywidgets \
     beautifulsoup4 lxml
 echo "✅ Dependencies installed"
