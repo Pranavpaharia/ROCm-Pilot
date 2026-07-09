@@ -788,24 +788,32 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
 
         def user_submit(message, history):
             """Handle user message submission with streaming."""
-            if not message.strip():
+            try:
+                if not message.strip():
+                    yield "", history, gr.update(), gr.update(), gr.update(), gr.update()
+                    return
+    
+                # Add user message to display immediately
+                history = history or []
+                history.append({"role": "user", "content": message})
+    
+                # Yield first to clear textbox and show the user's message immediately!
+                yield "", history, agent.get_status_md(), agent.get_db_stats_md(), "", agent.get_gpu_monitor_md()
+    
+                # Add assistant placeholder response
+                history.append({"role": "assistant", "content": ""})
+    
+                # Stream response
+                for response_text, sources in agent.respond_stream(message, history[:-1]):
+                    history[-1]["content"] = response_text
+                    yield "", history, agent.get_status_md(), agent.get_db_stats_md(), sources, agent.get_gpu_monitor_md()
+            except Exception as e:
+                import traceback
+                error_msg = traceback.format_exc()
+                if not history:
+                    history = [{"role": "assistant", "content": ""}]
+                history[-1]["content"] += f"\n\n❌ **Error during chat generation:**\n\n```text\n{error_msg}\n```"
                 yield "", history, gr.update(), gr.update(), gr.update(), gr.update()
-                return
-
-            # Add user message to display immediately
-            history = history or []
-            history.append({"role": "user", "content": message})
-
-            # Yield first to clear textbox and show the user's message immediately!
-            yield "", history, agent.get_status_md(), agent.get_db_stats_md(), "", agent.get_gpu_monitor_md()
-
-            # Add assistant placeholder response
-            history.append({"role": "assistant", "content": ""})
-
-            # Stream response
-            for response_text, sources in agent.respond_stream(message, history[:-1]):
-                history[-1]["content"] = response_text
-                yield "", history, agent.get_status_md(), agent.get_db_stats_md(), sources, agent.get_gpu_monitor_md()
 
         def handle_clear():
             """Handle clear history button."""
