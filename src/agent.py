@@ -261,7 +261,7 @@ class RocmPilotAgent:
     def __init__(
         self,
         db_path: str = 'data/chroma_db',
-        provider_type: str = "cloud", model: str = "accounts/fireworks/models/deepseek-v4-pro",
+        provider_type: str = "cloud", model: str = "accounts/fireworks/models/deepseek-v2-pro",
         auto_detect_env: bool = True,
         auto_approve_tools: bool = False,
         gpu_db_path: str = 'data/gpu_database.json',
@@ -588,7 +588,7 @@ def interactive_session(
     db_path: str = 'data/chroma_db',
     auto_approve_tools: bool = False,
     provider_type: str = "cloud",
-    model: str = "accounts/fireworks/models/deepseek-v4-pro",
+    model: str = "accounts/fireworks/models/deepseek-v2-pro",
 ):
     """Launch an interactive terminal session with ROCm-Pilot."""
     print("=" * 60)
@@ -696,7 +696,7 @@ if __name__ == '__main__':
 
     model_arg = args.model
     if not model_arg:
-        model_arg = "Qwen/Qwen2.5-72B-Instruct" if args.provider == "local_gpu" else "accounts/fireworks/models/deepseek-v4-pro"
+        model_arg = "Qwen/Qwen2.5-72B-Instruct" if args.provider == "local_gpu" else "accounts/fireworks/models/deepseek-v2-pro"
 
     interactive_session(
         db_path=args.db_path,

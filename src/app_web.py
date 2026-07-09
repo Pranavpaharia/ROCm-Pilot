@@ -69,7 +69,7 @@ class WebAgent:
         self.tool_executor = ToolExecutor(auto_approve=False)
         self.provider: Optional[BaseLLMProvider] = None
         self.provider_type = "cloud"
-        self.model_name = "accounts/fireworks/models/deepseek-v4-pro"
+        self.model_name = "accounts/fireworks/models/deepseek-v2-pro"
         self.gpu_db = None
         self.gpu_context = ""
         self._initialized = False
@@ -158,7 +158,7 @@ class WebAgent:
                 "LOCAL_MODEL_ID", "Qwen/Qwen2.5-7B-Instruct"
             )
         else:
-            self.model_name = "accounts/fireworks/models/deepseek-v4-pro"
+            self.model_name = "accounts/fireworks/models/deepseek-v2-pro"
         self._init_provider()
 
     def set_remote_env(self, json_text: str) -> str:
@@ -688,32 +688,33 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
                     )
                     cloud_model_dropdown = gr.Dropdown(
                         choices=[
-                            "accounts/fireworks/models/deepseek-v4-pro",
-                            "accounts/fireworks/models/deepseek-v4-turbo",
-                            "accounts/fireworks/models/deepseek-v4-flash",
-                            "accounts/fireworks/models/kimi-k2p6",
-                            "accounts/fireworks/models/kimi-k2p7-code",
-                            "accounts/fireworks/models/glm-5p2"
+                            "accounts/fireworks/models/deepseek-v2-pro",
+                            "accounts/fireworks/models/deepseek-v2-turbo",
+                            "accounts/fireworks/models/deepseek-v2-flash",
+                            "accounts/fireworks/models/glm-5p2",
+                            "accounts/fireworks/models/glm-5p1",
+                            "accounts/fireworks/models/gpt-oss-120b"
                         ],
-                        value="accounts/fireworks/models/deepseek-v4-pro",
+                        value="accounts/fireworks/models/deepseek-v2-pro",
                         label="Cloud Model (Fireworks)",
                         visible=True,
                         interactive=True,
                     )
                     local_model_dropdown = gr.Dropdown(
                         choices=[
+                            "Qwen/Qwen2.5-Coder-7B-Instruct",
+                            "Qwen/Qwen2.5-14B-Instruct",
                             "Qwen/Qwen2.5-Coder-32B-Instruct",
                             "Qwen/Qwen2.5-72B-Instruct",
-                            "meta-llama/Meta-Llama-3.1-70B-Instruct",
-                            "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct"
+                            "meta-llama/Meta-Llama-3.1-70B-Instruct"
                         ],
-                        value="Qwen/Qwen2.5-Coder-32B-Instruct",
+                        value="Qwen/Qwen2.5-Coder-7B-Instruct",
                         label="Local Model (MI300X VRAM)",
                         visible=False,
                         interactive=True,
                     )
                     provider_status = gr.Markdown(
-                        "Using **Cloud** provider: `accounts/fireworks/models/deepseek-v4-pro`",
+                        "Using **Cloud** provider: `accounts/fireworks/models/deepseek-v2-pro`",
                     )
 
                 # System Status
@@ -828,7 +829,17 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
                 loading_text
             )
             
-            agent.switch_provider(choice, model)
+            try:
+                agent.switch_provider(choice, model)
+            except Exception as e:
+                import traceback
+                error_msg = traceback.format_exc()
+                yield (
+                    gr.update(visible=is_cloud),
+                    gr.update(visible=not is_cloud),
+                    f"❌ **Error Loading Model:** `{model}`\n\n```text\n{error_msg}\n```"
+                )
+                return
             
             status_text = f"Using **Cloud** provider: `{model}`" if is_cloud else f"Using **Local AMD GPU**: `{model}`"
             yield (
@@ -846,7 +857,13 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
             loading_text = f"⏳ **Connecting:** `{model}`..." if is_cloud else f"⏳ **Downloading & Loading:** `{model}` (May take 1-2 minutes for huge models)..."
             yield loading_text
             
-            agent.switch_provider(choice, model)
+            try:
+                agent.switch_provider(choice, model)
+            except Exception as e:
+                import traceback
+                error_msg = traceback.format_exc()
+                yield f"❌ **Error Loading Model:** `{model}`\n\n```text\n{error_msg}\n```"
+                return
             
             status_text = f"Using **Cloud** provider: `{model}`" if is_cloud else f"Using **Local AMD GPU**: `{model}`"
             yield status_text

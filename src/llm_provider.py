@@ -32,7 +32,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             self.api_key = os.environ.get('FIREWORKS_API_KEY')
             if not self.api_key:
                 raise ValueError("FIREWORKS_API_KEY environment variable is required when USE_LOCAL_LEMONADE=false")
-            self.model = model or "accounts/fireworks/models/deepseek-v4-pro"
+            self.model = model or "accounts/fireworks/models/deepseek-v2-pro"
             
         self.client = openai.OpenAI(base_url=self.api_base, api_key=self.api_key)
 
@@ -44,9 +44,26 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         )
         if stream:
             def generate():
+                in_reasoning = False
                 for chunk in response:
-                    if chunk.choices[0].delta.content:
-                        yield chunk.choices[0].delta.content
+                    if not chunk.choices:
+                        continue
+                        
+                    delta = chunk.choices[0].delta
+                    
+                    if hasattr(delta, 'reasoning_content') and delta.reasoning_content:
+                        if not in_reasoning:
+                            yield "<details><summary>🤔 <i>Thinking process...</i></summary><blockquote style='font-size: 0.9em; color: #94a3b8; border-left: 3px solid #10b981; padding-left: 10px; margin-top: 8px;'>\n"
+                            in_reasoning = True
+                        yield delta.reasoning_content
+                    elif delta.content:
+                        if in_reasoning:
+                            yield "\n</blockquote></details>\n\n"
+                            in_reasoning = False
+                        yield delta.content
+                        
+                if in_reasoning:
+                    yield "\n</blockquote></details>\n\n"
             return generate()
         else:
             return response.choices[0].message.content

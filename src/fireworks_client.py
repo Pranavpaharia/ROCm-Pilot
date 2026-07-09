@@ -7,7 +7,7 @@ import os
 from typing import Generator, Union
 
 # Default model — DeepSeek V4 Pro
-DEFAULT_MODEL = "accounts/fireworks/models/deepseek-v4-pro"
+DEFAULT_MODEL = "accounts/fireworks/models/deepseek-v2-pro"
 FIREWORKS_BASE_URL = "https://api.fireworks.ai/inference/v1"
 
 
