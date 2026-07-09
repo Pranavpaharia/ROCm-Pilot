@@ -44,7 +44,7 @@ echo "  ↓ Purging potential conflicting packages..."
 "$PYTHON_BIN" -m pip uninstall -y sentence-transformers chromadb 2>/dev/null || true
 
 echo "  ↓ Installing additional dependencies..."
-"$PYTHON_BIN" -m pip install --break-system-packages \
+"$PYTHON_BIN" -m pip install --break-system-packages --ignore-installed PyYAML \
     chromadb \
     sentence-transformers \
     "transformers>=4.45.2" \
