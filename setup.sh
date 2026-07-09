@@ -49,7 +49,7 @@ echo "  ↓ Installing additional dependencies..."
     sentence-transformers \
     "transformers>=4.45.2" \
     openai tqdm ipywidgets \
-    beautifulsoup4 lxml
+    beautifulsoup4 lxml gradio
 echo "✅ Dependencies installed"
 echo ""
 
