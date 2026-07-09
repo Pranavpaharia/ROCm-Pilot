@@ -1,0 +1,201 @@
+{
+  "last_updated": "2026-07-09",
+  "source_urls": {
+    "system_requirements": "https://rocm.docs.amd.com/projects/install-on-linux/en/latest/reference/system-requirements.html",
+    "pytorch_rocm": "https://rocm.docs.amd.com/projects/install-on-linux/en/latest/how-to/3rd-party/pytorch-install.html",
+    "pytorch_official": "https://pytorch.org/get-started/locally/",
+    "compatibility_matrix": "https://rocm.docs.amd.com/projects/install-on-linux/en/latest/reference/compatibility-matrix.html"
+  },
+  "gpu_architectures": {
+    "gfx906": {
+      "gfx_id": "gfx906",
+      "name": "Radeon VII / MI50",
+      "family": "Vega 20",
+      "category": "consumer+datacenter",
+      "vram_gb": [16],
+      "min_rocm": "4.5",
+      "max_rocm": "5.7",
+      "rocm_versions": ["4.5", "5.0", "5.1", "5.2", "5.3", "5.4", "5.5", "5.6", "5.7"],
+      "pytorch_versions": ["1.13", "2.0", "2.1"],
+      "status": "legacy",
+      "notes": "End-of-life for ROCm support after 5.7. Community-maintained PyTorch wheels may still work."
+    },
+    "gfx908": {
+      "gfx_id": "gfx908",
+      "name": "MI100",
+      "family": "CDNA",
+      "category": "datacenter",
+      "vram_gb": [32],
+      "min_rocm": "4.0",
+      "max_rocm": "6.0",
+      "rocm_versions": ["4.0", "4.5", "5.0", "5.1", "5.2", "5.3", "5.4", "5.5", "5.6", "5.7", "6.0"],
+      "pytorch_versions": ["1.13", "2.0", "2.1", "2.2"],
+      "status": "legacy",
+      "notes": "First CDNA architecture. Supported through ROCm 6.0."
+    },
+    "gfx90a": {
+      "gfx_id": "gfx90a",
+      "name": "MI200 Series (MI210/MI250/MI250X)",
+      "family": "CDNA2",
+      "category": "datacenter",
+      "vram_gb": [64, 128],
+      "min_rocm": "5.0",
+      "max_rocm": "6.2",
+      "rocm_versions": ["5.0", "5.1", "5.2", "5.3", "5.4", "5.5", "5.6", "5.7", "6.0", "6.1", "6.2"],
+      "pytorch_versions": ["2.0", "2.1", "2.2", "2.3", "2.4"],
+      "status": "supported",
+      "notes": "Primary datacenter GPU for ROCm 5.x/6.x. Dual-die design (MI250/MI250X)."
+    },
+    "gfx942": {
+      "gfx_id": "gfx942",
+      "name": "MI300X / MI300A",
+      "family": "CDNA3",
+      "category": "datacenter",
+      "vram_gb": [128, 192],
+      "min_rocm": "6.0",
+      "max_rocm": "6.2",
+      "rocm_versions": ["6.0", "6.1", "6.2", "7.0", "7.1", "7.2"],
+      "pytorch_versions": ["2.3", "2.4", "2.5"],
+      "status": "current",
+      "notes": "Latest CDNA3 GPU. Primary target for ROCm-Pilot."
+    },
+    "gfx950": {
+      "gfx_id": "gfx950",
+      "name": "MI355X / MI350X",
+      "family": "CDNA4",
+      "category": "datacenter",
+      "vram_gb": [288],
+      "min_rocm": "7.0",
+      "max_rocm": "7.2",
+      "rocm_versions": ["7.0", "7.1", "7.2"],
+      "pytorch_versions": ["2.5", "2.6"],
+      "status": "current",
+      "notes": "Newest CDNA4 architecture, supported in ROCm 7.x."
+    },
+    "gfx1030": {
+      "gfx_id": "gfx1030",
+      "name": "RX 6800 / 6800 XT / 6900 XT / 6950 XT",
+      "family": "RDNA2",
+      "category": "consumer",
+      "vram_gb": [16],
+      "min_rocm": "5.0",
+      "max_rocm": "6.1",
+      "rocm_versions": ["5.0", "5.1", "5.2", "5.3", "5.4", "5.5", "5.6", "5.7", "6.0", "6.1"],
+      "pytorch_versions": ["2.0", "2.1", "2.2"],
+      "status": "limited",
+      "notes": "Consumer RDNA2 GPU. Officially 'unsupported' but community ROCm support exists."
+    },
+    "gfx1100": {
+      "gfx_id": "gfx1100",
+      "name": "RX 7900 XTX / 7900 XT",
+      "family": "RDNA3",
+      "category": "consumer",
+      "vram_gb": [20, 24],
+      "min_rocm": "5.4.2",
+      "max_rocm": "6.2",
+      "rocm_versions": ["5.4.2", "5.5", "5.6", "5.7", "6.0", "6.1", "6.2", "7.0", "7.1", "7.2"],
+      "pytorch_versions": ["2.1", "2.2", "2.3", "2.4", "2.5"],
+      "status": "supported",
+      "notes": "Top consumer RDNA3 GPU. Officially supported since ROCm 5.4.2."
+    },
+    "gfx1101": {
+      "gfx_id": "gfx1101",
+      "name": "RX 7800 XT / 7700 XT",
+      "family": "RDNA3",
+      "category": "consumer",
+      "vram_gb": [12, 16],
+      "min_rocm": "5.7",
+      "max_rocm": "6.2",
+      "rocm_versions": ["5.7", "6.0", "6.1", "6.2", "7.0", "7.1", "7.2"],
+      "pytorch_versions": ["2.2", "2.3", "2.4", "2.5"],
+      "status": "supported",
+      "notes": "Mid-range RDNA3. Supported since ROCm 5.7."
+    },
+    "gfx1102": {
+      "gfx_id": "gfx1102",
+      "name": "RX 7600 / 7600 XT",
+      "family": "RDNA3",
+      "category": "consumer",
+      "vram_gb": [8, 16],
+      "min_rocm": "6.0",
+      "max_rocm": "6.2",
+      "rocm_versions": ["6.0", "6.1", "6.2"],
+      "pytorch_versions": ["2.3", "2.4"],
+      "status": "supported",
+      "notes": "Entry-level RDNA3. 8GB variant may be too limited for large models."
+    },
+    "gfx1200": {
+      "gfx_id": "gfx1200",
+      "name": "RX 9060 Series",
+      "family": "RDNA4",
+      "category": "consumer",
+      "vram_gb": [12, 16],
+      "min_rocm": "7.0",
+      "max_rocm": "7.2",
+      "rocm_versions": ["7.0", "7.1", "7.2"],
+      "pytorch_versions": ["2.5", "2.6"],
+      "status": "current",
+      "notes": "Next-generation RDNA4 architecture, supported in ROCm 7.x."
+    },
+    "gfx1201": {
+      "gfx_id": "gfx1201",
+      "name": "RX 9070 Series",
+      "family": "RDNA4",
+      "category": "consumer",
+      "vram_gb": [16, 24],
+      "min_rocm": "7.0",
+      "max_rocm": "7.2",
+      "rocm_versions": ["7.0", "7.1", "7.2"],
+      "pytorch_versions": ["2.5", "2.6"],
+      "status": "current",
+      "notes": "Next-generation high-end RDNA4 architecture, supported in ROCm 7.x."
+    }
+  },
+  "rocm_versions": {
+    "7.2": {
+      "release_date": "2025-05",
+      "supported_os": ["Ubuntu 24.04", "Ubuntu 22.04", "RHEL 9.4", "RHEL 9.5", "SLES 15 SP6"],
+      "kernel_support": ["6.8", "6.5", "5.15"],
+      "pytorch_versions": ["2.5", "2.6"],
+      "status": "current"
+    },
+    "6.2": {
+      "release_date": "2024-08",
+      "supported_os": ["Ubuntu 22.04", "Ubuntu 24.04", "RHEL 8.9", "RHEL 9.3", "SLES 15 SP5"],
+      "kernel_support": ["5.15", "6.1", "6.5", "6.8"],
+      "pytorch_versions": ["2.3", "2.4", "2.5"],
+      "status": "supported"
+    },
+    "6.1": {
+      "release_date": "2024-04",
+      "supported_os": ["Ubuntu 22.04", "RHEL 8.9", "RHEL 9.3", "SLES 15 SP5"],
+      "kernel_support": ["5.15", "6.1", "6.5"],
+      "pytorch_versions": ["2.2", "2.3", "2.4"],
+      "status": "supported"
+    },
+    "6.0": {
+      "release_date": "2024-01",
+      "supported_os": ["Ubuntu 22.04", "RHEL 8.8", "RHEL 9.2", "SLES 15 SP5"],
+      "kernel_support": ["5.15", "6.1", "6.5"],
+      "pytorch_versions": ["2.1", "2.2", "2.3"],
+      "status": "supported"
+    }
+  },
+  "pytorch_rocm_matrix": {
+    "2.5": {
+      "rocm_versions": ["6.2", "7.0", "7.1", "7.2"],
+      "pip_install": "pip install torch==2.5.1+rocm6.2 torchvision==0.20.1+rocm6.2 torchaudio==2.5.1+rocm6.2 --index-url https://download.pytorch.org/whl/rocm6.2",
+      "docker_image": "rocm/pytorch:rocm6.2_ubuntu22.04_py3.10_pytorch_release_2.5.1"
+    },
+    "2.4": {
+      "rocm_versions": ["6.1", "6.2"],
+      "pip_install": "pip install torch==2.4.0+rocm6.1 torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.1",
+      "docker_image": "rocm/pytorch:rocm6.1_ubuntu22.04_py3.10_pytorch_release_2.4.0"
+    },
+    "2.3": {
+      "rocm_versions": ["6.0", "6.1"],
+      "pip_install": "pip install torch==2.3.0+rocm6.0 torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm6.0",
+      "docker_image": "rocm/pytorch:rocm6.0_ubuntu22.04_py3.10_pytorch_release_2.3.0"
+    }
+  }
+}

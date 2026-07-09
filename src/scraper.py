@@ -1,14 +1,19 @@
 """
 Document collector for ROCm documentation.
 Walks cloned GitHub repos and extracts all documentation files.
-Includes markdown table extraction for compatibility matrices.
+Includes markdown table extraction for compatibility matrices,
+RST table extraction, and content deduplication.
 """
 
+import hashlib
+import logging
 import os
 import re
 from pathlib import Path
 from typing import List, Dict, Optional
 from tqdm import tqdm
+
+logger = logging.getLogger("rocm_pilot.scraper")
 
 
 # File extensions to collect
@@ -27,6 +32,9 @@ REPO_URL_MAP = {
     'rocm-install-on-linux': 'https://rocm.docs.amd.com/projects/install-on-linux/en/latest/',
     'rocm-blogs': 'https://rocm.docs.amd.com/en/latest/blogs/',
     'gpuaidev': 'https://github.com/ROCm/gpuaidev/blob/main/',
+    'HIP': 'https://rocm.docs.amd.com/projects/HIP/en/latest/',
+    'MIOpen': 'https://rocm.docs.amd.com/projects/MIOpen/en/latest/',
+    'AMDMIGraphX': 'https://rocm.docs.amd.com/projects/AMDMIGraphX/en/latest/',
 }
 
 
@@ -152,6 +160,127 @@ def _format_table_as_text(table: Dict) -> str:
     return '\n'.join(lines)
 
 
+def _extract_rst_tables(content: str) -> List[Dict]:
+    """
+    Extract reStructuredText tables from content.
+
+    Handles two RST table formats:
+    1. Grid tables (use +---+---+ borders)
+    2. Simple tables (use === === borders)
+
+    Returns:
+        List of table dicts with keys: headers, rows, raw, start_line, end_line.
+    """
+    tables = []
+    lines = content.split('\n')
+    i = 0
+
+    while i < len(lines):
+        line = lines[i].strip()
+
+        # Detect grid table: starts with +---+
+        if re.match(r'^\+[-=+]+\+$', line):
+            table_lines = [line]
+            start = i
+            i += 1
+            while i < len(lines) and (
+                lines[i].strip().startswith('|') or
+                re.match(r'^\+[-=+]+\+$', lines[i].strip())
+            ):
+                table_lines.append(lines[i])
+                i += 1
+
+            if len(table_lines) >= 3:
+                # Parse grid table
+                headers = []
+                rows = []
+                for tl in table_lines:
+                    tl_stripped = tl.strip()
+                    if tl_stripped.startswith('|'):
+                        cells = [
+                            c.strip()
+                            for c in tl_stripped.strip('|').split('|')
+                        ]
+                        if not headers:
+                            headers = cells
+                        else:
+                            rows.append(cells)
+
+                if headers:
+                    tables.append({
+                        'headers': headers,
+                        'rows': rows,
+                        'raw': '\n'.join(table_lines),
+                        'start_line': start,
+                        'end_line': i,
+                    })
+            continue
+
+        # Detect simple table: starts with === ===
+        if re.match(r'^[=\s]+$', line) and '=' in line and len(line) > 3:
+            table_lines = [line]
+            start = i
+            i += 1
+            # Read until next === line or blank
+            while i < len(lines) and lines[i].strip():
+                table_lines.append(lines[i])
+                i += 1
+                if re.match(r'^[=\s]+$', lines[i - 1].strip()):
+                    # Check if this is the closing border
+                    eq_count = sum(
+                        1 for tl in table_lines
+                        if re.match(r'^[=\s]+$', tl.strip())
+                    )
+                    if eq_count >= 2:
+                        break
+
+            if len(table_lines) >= 3:
+                # Parse simple table by column positions
+                border = table_lines[0]
+                col_positions = []
+                in_col = False
+                col_start = 0
+                for ci, ch in enumerate(border):
+                    if ch == '=' and not in_col:
+                        col_start = ci
+                        in_col = True
+                    elif ch == ' ' and in_col:
+                        col_positions.append((col_start, ci))
+                        in_col = False
+                if in_col:
+                    col_positions.append((col_start, len(border)))
+
+                if col_positions:
+                    headers = []
+                    rows = []
+                    for tl in table_lines:
+                        if re.match(r'^[=\s-]+$', tl.strip()):
+                            continue
+                        cells = [
+                            tl[s:e].strip()
+                            for s, e in col_positions
+                            if s < len(tl)
+                        ]
+                        if not headers:
+                            headers = cells
+                        elif any(c for c in cells):
+                            rows.append(cells)
+
+                    if headers:
+                        tables.append({
+                            'headers': headers,
+                            'rows': rows,
+                            'raw': '\n'.join(table_lines),
+                            'start_line': start,
+                            'end_line': i,
+                        })
+            continue
+
+        i += 1
+
+    return tables
+
+
 def collect_documents(raw_docs_dir: str) -> List[Dict]:
     """
     Walk through cloned repos and collect all documentation files.
@@ -169,6 +298,7 @@ def collect_documents(raw_docs_dir: str) -> List[Dict]:
     """
     documents = []
     raw_docs_path = Path(raw_docs_dir)
+    seen_hashes = set()  # For content deduplication
 
     if not raw_docs_path.exists():
         raise FileNotFoundError(
@@ -194,6 +324,7 @@ def collect_documents(raw_docs_dir: str) -> List[Dict]:
                     doc_files.append(os.path.join(root, filename))
 
         # Read each file
+        skipped_dupes = 0
         for filepath in tqdm(doc_files, desc=f"📂 {repo_name}", unit="files"):
             try:
                 with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
@@ -202,6 +333,13 @@ def collect_documents(raw_docs_dir: str) -> List[Dict]:
                 # Skip trivially small files (likely just headers or redirects)
                 if len(content.strip()) < 100:
                     continue
+
+                # Deduplication: skip if we've seen identical content
+                content_hash = hashlib.md5(content.encode('utf-8')).hexdigest()
+                if content_hash in seen_hashes:
+                    skipped_dupes += 1
+                    continue
+                seen_hashes.add(content_hash)
 
                 # Truncate very large files (auto-generated API docs, etc.)
                 if len(content) > 50_000:
@@ -223,8 +361,12 @@ def collect_documents(raw_docs_dir: str) -> List[Dict]:
                     # Convert to .html for hosted readthedocs/Sphinx websites
                     source_url = base_url + clean_rel_path.replace('.rst', '.html').replace('.md', '.html')
 
-                # Extract markdown tables if present
+                # Extract tables: markdown tables for .md, RST tables for .rst
                 tables = _extract_markdown_tables(content)
+                file_ext = Path(filepath).suffix.lower()
+                if file_ext == '.rst':
+                    rst_tables = _extract_rst_tables(content)
+                    tables.extend(rst_tables)
                 
                 documents.append({
                     'content': content,
@@ -238,7 +380,11 @@ def collect_documents(raw_docs_dir: str) -> List[Dict]:
             except Exception as e:
                 print(f"  ⚠️  Could not read {filepath}: {e}")
 
+        if skipped_dupes:
+            logger.info("Skipped %d duplicate files in %s", skipped_dupes, repo_name)
+
     print(f"\n✅ Collected {len(documents)} documents from {raw_docs_dir}")
+    print(f"   (Deduplicated {len(seen_hashes)} unique content hashes)")
     return documents
 
 

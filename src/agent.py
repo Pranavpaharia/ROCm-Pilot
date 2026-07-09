@@ -11,7 +11,7 @@ from typing import Optional, List, Dict, Callable
 from pathlib import Path
 
 from src.env_detector import detect_environment, format_env_context
-from src.retriever import get_retriever, retrieve, format_context
+from src.retriever import get_retriever, retrieve, format_context, smart_retrieve
 from src.llm_provider import get_provider, FireworksProvider
 
 
@@ -264,6 +264,7 @@ class RocmPilotAgent:
         provider_type: str = "cloud", model: str = "accounts/fireworks/models/deepseek-v4-pro",
         auto_detect_env: bool = True,
         auto_approve_tools: bool = False,
+        gpu_db_path: str = 'data/gpu_database.json',
     ):
         """
         Initialize ROCm-Pilot.
@@ -273,16 +274,30 @@ class RocmPilotAgent:
             model: Fireworks AI model identifier.
             auto_detect_env: Whether to auto-detect AMD hardware on startup.
             auto_approve_tools: If True, skip user approval for tool execution.
+            gpu_db_path: Path to the structured GPU compatibility database.
         """
         self.provider = get_provider(provider_type, model)
         self.conversation_history: List[Dict[str, str]] = []
         self.provider_type = provider_type
         self.env_context = ""
+        self.gpu_context = ""
         self.embedding_model = None
+        self.gpu_db = None
         self.tool_executor = ToolExecutor(auto_approve=auto_approve_tools)
 
         # Validate API key at startup
         _check_api_key()
+
+        # Load structured GPU compatibility database
+        try:
+            from src.gpu_compat import load_gpu_database, format_gpu_report, get_gpu_by_detected_name
+            self.gpu_db = load_gpu_database(gpu_db_path)
+            gpu_count = len(self.gpu_db.get('gpu_architectures', {}))
+            print(f"✅ GPU compatibility database loaded: {gpu_count} architectures")
+        except FileNotFoundError:
+            print("⚠️  GPU database not found — structured lookups disabled")
+        except Exception as e:
+            print(f"⚠️  GPU database error: {e} — structured lookups disabled")
 
         # Load the vector store
         print("Loading knowledge base...")
@@ -307,6 +322,10 @@ class RocmPilotAgent:
             self.env_context = format_env_context(env)
             print(self.env_context)
 
+            # If GPU detected, inject structured compatibility data
+            if self.gpu_db:
+                self._inject_gpu_context(env)
+
         # Log GPU status at startup
         self._log_gpu_status()
 
@@ -325,6 +344,9 @@ class RocmPilotAgent:
         """
         Ask a question about AMD/ROCm.
 
+        Uses smart retrieval to route queries to structured GPU database
+        for factual lookups and ChromaDB for general documentation.
+
         Args:
             question: The user's natural-language question.
             top_k: Number of documentation chunks to retrieve.
@@ -335,15 +357,15 @@ class RocmPilotAgent:
         Returns:
             The agent's full response string.
         """
-        # Step 1 — Retrieve relevant documentation
-        results = retrieve(
+        # Step 1 — Smart retrieval (structured + semantic)
+        context = smart_retrieve(
             query=question,
             collection=self.collection,
+            gpu_db=self.gpu_db,
             embedding_model=self.embedding_model,
             top_k=top_k,
             doc_type_filter=doc_type_filter,
         )
-        doc_context = format_context(results)
 
         # Step 2 — Assemble the system message with tool descriptions
         tool_descriptions = self.tool_executor.get_tool_descriptions()
@@ -352,17 +374,42 @@ class RocmPilotAgent:
         )
         if self.env_context:
             system_message += f"\n\n{self.env_context}"
+        if self.gpu_context:
+            system_message += f"\n\n{self.gpu_context}"
 
-        # Step 3 — Build user message with injected context
+        # Step 3 — Build user message with structured + doc context
+        context_sections = []
+        if context['structured_data']:
+            context_sections.append(
+                "--- GPU COMPATIBILITY DATA (from structured database — high confidence) ---\n"
+                f"{context['structured_data']}\n"
+                "--- END GPU DATA ---"
+            )
+        if context['documentation']:
+            context_sections.append(
+                "--- DOCUMENTATION CONTEXT ---\n"
+                f"{context['documentation']}\n"
+                "--- END CONTEXT ---"
+            )
+
+        combined_context = "\n\n".join(context_sections) if context_sections else "No relevant documentation found."
+
+        # Include verified source URLs
+        source_urls_text = ""
+        if context['source_urls']:
+            source_urls_text = (
+                "\n\nVerified source URLs for citation:\n"
+                + "\n".join(f"- {url}" for url in context['source_urls'][:10])
+            )
+
         user_message = (
-            "Based on the following official AMD ROCm documentation, "
-            "answer the user's question.\n\n"
-            "--- DOCUMENTATION CONTEXT ---\n"
-            f"{doc_context}\n"
-            "--- END CONTEXT ---\n\n"
+            "Based on the following information, answer the user's question.\n"
+            "Prefer the GPU COMPATIBILITY DATA section for version/compatibility facts.\n\n"
+            f"{combined_context}"
+            f"{source_urls_text}\n\n"
             f"**User Question:** {question}\n\n"
-            "Provide a clear, actionable answer grounded in the documentation. "
-            "Cite the source documents."
+            "Provide a clear, actionable answer grounded in the provided data. "
+            "Cite the source documents and include relevant URLs."
         )
 
         # Step 4 — Build the full message list (system + history + user)
@@ -452,6 +499,38 @@ class RocmPilotAgent:
         """Reset the conversation history."""
         self.conversation_history.clear()
         print("🗑️  Conversation history cleared.")
+
+    def _inject_gpu_context(self, env: Dict):
+        """Inject structured GPU compatibility data for the detected hardware."""
+        try:
+            from src.gpu_compat import get_gpu_by_detected_name, format_gpu_report
+
+            gpus = env.get('gpus', [])
+            gpu_reports = []
+            for gpu in gpus:
+                if not gpu.get('detected'):
+                    continue
+                # Try matching by product name from rocm-smi
+                gpu_name = gpu.get('model', '')
+                gpu_info = get_gpu_by_detected_name(self.gpu_db, gpu_name)
+                if gpu_info:
+                    gfx_id = gpu_info.get('gfx_id', '')
+                    report = format_gpu_report(self.gpu_db, gfx_id)
+                    gpu_reports.append(report)
+
+            if gpu_reports:
+                self.gpu_context = (
+                    "--- DETECTED GPU COMPATIBILITY INFO ---\n"
+                    + "\n\n".join(gpu_reports)
+                    + "\n--- END GPU INFO ---"
+                )
+                logging.getLogger('rocm_pilot').info(
+                    "Injected structured GPU context for %d GPU(s)", len(gpu_reports)
+                )
+        except Exception as e:
+            logging.getLogger('rocm_pilot').debug(
+                "Could not inject GPU context: %s", e
+            )
 
     def _log_gpu_status(self):
         """Log GPU model, VRAM, and HIP version at startup."""
@@ -572,7 +651,29 @@ if __name__ == '__main__':
         action='store_true',
         help='Auto-approve diagnostic tool execution without user confirmation',
     )
+    parser.add_argument(
+        '--refresh-data',
+        action='store_true',
+        help='Refresh GPU compatibility data from AMD docs before starting',
+    )
+    parser.add_argument(
+        '--gpu-db',
+        default='data/gpu_database.json',
+        help='Path to the GPU compatibility database (default: data/gpu_database.json)',
+    )
     args = parser.parse_args()
+
+    # Optionally refresh GPU data from live AMD docs
+    if args.refresh_data:
+        print("🔄 Refreshing GPU compatibility data from AMD docs...")
+        try:
+            from src.live_scraper import AMDDocsScraper
+            scraper = AMDDocsScraper()
+            result = scraper.update_gpu_database(args.gpu_db)
+            gpu_count = len(result.get('gpu_architectures', {}))
+            print(f"✅ Updated {gpu_count} GPU architecture entries")
+        except Exception as e:
+            print(f"⚠️  Live scraping failed: {e} — using cached data")
 
     interactive_session(
         db_path=args.db_path,

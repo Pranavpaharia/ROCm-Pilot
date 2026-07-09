@@ -48,7 +48,8 @@ echo "  ↓ Installing additional dependencies..."
     chromadb \
     sentence-transformers \
     transformers==4.45.2 \
-    openai tqdm ipywidgets
+    openai tqdm ipywidgets \
+    beautifulsoup4 lxml
 echo "✅ Dependencies installed"
 echo ""
 
@@ -71,8 +72,22 @@ clone_if_missing "https://github.com/ROCm/ROCm.git" "data/raw_docs/ROCm"
 clone_if_missing "https://github.com/ROCm/rocm-install-on-linux.git" "data/raw_docs/rocm-install-on-linux"
 clone_if_missing "https://github.com/ROCm/rocm-blogs.git" "data/raw_docs/rocm-blogs"
 clone_if_missing "https://github.com/ROCm/gpuaidev.git" "data/raw_docs/gpuaidev"
+clone_if_missing "https://github.com/ROCm/HIP.git" "data/raw_docs/HIP"
+clone_if_missing "https://github.com/ROCm/MIOpen.git" "data/raw_docs/MIOpen"
+clone_if_missing "https://github.com/ROCm/AMDMIGraphX.git" "data/raw_docs/AMDMIGraphX"
 
 echo "✅ Documentation repos ready"
+echo ""
+
+# 2.5. Fetch latest GPU compatibility data from AMD docs
+echo "[2.5/4] Fetching latest GPU compatibility data..."
+"$PYTHON_BIN" -c "
+from src.live_scraper import AMDDocsScraper
+scraper = AMDDocsScraper()
+result = scraper.update_gpu_database('data/gpu_database.json')
+gpu_count = len(result.get('gpu_architectures', {}))
+print(f'  ✅ Updated {gpu_count} GPU architecture entries')
+" 2>/dev/null || echo "  ⚠️  Live scraping failed, using bundled GPU database"
 echo ""
 
 # 3. Verify GPU

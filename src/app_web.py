@@ -28,7 +28,7 @@ from src.env_detector import (
     detect_gpu_processes,
     format_gpu_monitor,
 )
-from src.retriever import get_retriever, retrieve, format_context
+from src.retriever import get_retriever, retrieve, format_context, smart_retrieve
 from src.llm_provider import get_provider, BaseLLMProvider
 from src.agent import (
     _check_api_key,
@@ -70,6 +70,8 @@ class WebAgent:
         self.provider: Optional[BaseLLMProvider] = None
         self.provider_type = "cloud"
         self.model_name = "accounts/fireworks/models/deepseek-v4-pro"
+        self.gpu_db = None
+        self.gpu_context = ""
         self._initialized = False
 
     def initialize(self):
@@ -105,6 +107,33 @@ class WebAgent:
 
         # Initialize LLM provider
         self._init_provider()
+
+        # Load structured GPU compatibility database
+        try:
+            from src.gpu_compat import load_gpu_database, get_gpu_by_detected_name, format_gpu_report
+            self.gpu_db = load_gpu_database('data/gpu_database.json')
+            logger.info("GPU compatibility database loaded for Web Agent")
+            
+            # If GPU detected locally, pre-inject compatibility info
+            gpus = self.env_raw.get('gpus', [])
+            gpu_reports = []
+            for gpu in gpus:
+                if not gpu.get('detected'):
+                    continue
+                gpu_name = gpu.get('model', '')
+                gpu_info = get_gpu_by_detected_name(self.gpu_db, gpu_name)
+                if gpu_info:
+                    gfx_id = gpu_info.get('gfx_id', '')
+                    report = format_gpu_report(self.gpu_db, gfx_id)
+                    gpu_reports.append(report)
+            if gpu_reports:
+                self.gpu_context = (
+                    "--- DETECTED GPU COMPATIBILITY INFO ---\n"
+                    + "\n\n".join(gpu_reports)
+                    + "\n--- END GPU INFO ---"
+                )
+        except Exception as e:
+            logger.warning("Failed to load GPU database for Web Agent: %s", e)
 
         self._initialized = True
 
@@ -203,17 +232,17 @@ class WebAgent:
         if not message.strip():
             return "", history, ""
 
-        # Retrieve relevant documentation
-        results = retrieve(
+        # Smart Retrieve (structured + semantic)
+        context = smart_retrieve(
             query=message,
             collection=self.collection,
+            gpu_db=self.gpu_db,
             embedding_model=self.embedding_model,
             top_k=8,
         )
-        doc_context = format_context(results)
 
         # Build sources display
-        sources_md = self._format_sources(results)
+        sources_md = self._format_sources(context.get('results', []))
 
         # Assemble system message
         tool_descriptions = self.tool_executor.get_tool_descriptions()
@@ -223,17 +252,42 @@ class WebAgent:
         env_ctx = self._get_effective_env_context()
         if env_ctx:
             system_message += f"\n\n{env_ctx}"
+        if self.gpu_context:
+            system_message += f"\n\n{self.gpu_context}"
 
-        # Build user message
+        # Build user message with structured + doc context
+        context_sections = []
+        if context['structured_data']:
+            context_sections.append(
+                "--- GPU COMPATIBILITY DATA (from structured database — high confidence) ---\n"
+                f"{context['structured_data']}\n"
+                "--- END GPU DATA ---"
+            )
+        if context['documentation']:
+            context_sections.append(
+                "--- DOCUMENTATION CONTEXT ---\n"
+                f"{context['documentation']}\n"
+                "--- END CONTEXT ---"
+            )
+
+        combined_context = "\n\n".join(context_sections) if context_sections else "No relevant documentation found."
+
+        # Include verified source URLs
+        source_urls_text = ""
+        if context['source_urls']:
+            source_urls_text = (
+                "\n\nVerified source URLs for citation:\n"
+                + "\n".join(f"- {url}" for url in context['source_urls'][:10])
+            )
+
         user_message = (
-            "Based on the following official AMD ROCm documentation, "
-            "answer the user's question.\n\n"
-            "--- DOCUMENTATION CONTEXT ---\n"
-            f"{doc_context}\n"
-            "--- END CONTEXT ---\n\n"
+            "Based on the following information, answer the user's question.\n"
+            "Prefer the GPU COMPATIBILITY DATA section for version/compatibility facts.\n\n"
+            f"{combined_context}"
+            f"{source_urls_text}\n\n"
             f"**User Question:** {message}\n\n"
-            "Provide a clear, actionable answer grounded in the documentation. "
-            "Cite the source documents."
+            "Provide a clear, actionable answer grounded in the provided data. "
+            "Cite the source documents and include relevant URLs."
         )
 
         # Build messages
@@ -287,15 +341,15 @@ class WebAgent:
         if not message.strip():
             return
 
-        # Retrieve relevant documentation
-        results = retrieve(
+        # Smart Retrieve (structured + semantic)
+        context = smart_retrieve(
             query=message,
             collection=self.collection,
+            gpu_db=self.gpu_db,
             embedding_model=self.embedding_model,
             top_k=8,
         )
-        doc_context = format_context(results)
-        sources_md = self._format_sources(results)
+        sources_md = self._format_sources(context.get('results', []))
 
         # Assemble system message
         tool_descriptions = self.tool_executor.get_tool_descriptions()
@@ -305,17 +359,42 @@ class WebAgent:
         env_ctx = self._get_effective_env_context()
         if env_ctx:
             system_message += f"\n\n{env_ctx}"
+        if self.gpu_context:
+            system_message += f"\n\n{self.gpu_context}"
 
-        # Build user message
+        # Build user message with structured + doc context
+        context_sections = []
+        if context['structured_data']:
+            context_sections.append(
+                "--- GPU COMPATIBILITY DATA (from structured database — high confidence) ---\n"
+                f"{context['structured_data']}\n"
+                "--- END GPU DATA ---"
+            )
+        if context['documentation']:
+            context_sections.append(
+                "--- DOCUMENTATION CONTEXT ---\n"
+                f"{context['documentation']}\n"
+                "--- END CONTEXT ---"
+            )
+
+        combined_context = "\n\n".join(context_sections) if context_sections else "No relevant documentation found."
+
+        # Include verified source URLs
+        source_urls_text = ""
+        if context['source_urls']:
+            source_urls_text = (
+                "\n\nVerified source URLs for citation:\n"
+                + "\n".join(f"- {url}" for url in context['source_urls'][:10])
+            )
+
         user_message = (
-            "Based on the following official AMD ROCm documentation, "
-            "answer the user's question.\n\n"
-            "--- DOCUMENTATION CONTEXT ---\n"
-            f"{doc_context}\n"
-            "--- END CONTEXT ---\n\n"
+            "Based on the following information, answer the user's question.\n"
+            "Prefer the GPU COMPATIBILITY DATA section for version/compatibility facts.\n\n"
+            f"{combined_context}"
+            f"{source_urls_text}\n\n"
             f"**User Question:** {message}\n\n"
-            "Provide a clear, actionable answer grounded in the documentation. "
-            "Cite the source documents."
+            "Provide a clear, actionable answer grounded in the provided data. "
+            "Cite the source documents and include relevant URLs."
         )
 
         # Build messages
