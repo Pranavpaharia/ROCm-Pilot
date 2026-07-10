@@ -716,7 +716,7 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
                             "meta-llama/Meta-Llama-3.1-70B-Instruct"
                         ],
                         value="google/gemma-4-12b-it",
-                        label="Local Model (MI300X VRAM)",
+                        label="Local Model (Detected AMD GPU)",
                         visible=False,
                         interactive=True,
                     )
