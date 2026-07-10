@@ -16,8 +16,8 @@ echo ""
 # 1. Install ROCm-compatible PyTorch if not already available
 PYTHON_BIN="${PYTHON_CMD:-python3}"
 echo "[1/4] Checking for PyTorch..."
-if "$PYTHON_BIN" -c "import torch" 2>/dev/null; then
-    echo "  ✓ PyTorch is already installed. Skipping installation..."
+if "$PYTHON_BIN" -c "import torch, torchvision; assert torch.cuda.is_available() and hasattr(torch.version, 'hip') and torch.version.hip is not None" 2>/dev/null; then
+    echo "  ✓ PyTorch with ROCm support and torchvision are already installed. Skipping installation..."
 else
     IS_DARWIN=$(uname -s | grep -i -q "Darwin" && echo "true" || echo "false")
     if [ "$IS_DARWIN" = "true" ]; then

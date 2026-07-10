@@ -32,7 +32,7 @@ We've massively expanded ROCm-Pilot during the hackathon. Here is what's new:
 
 - 🖥️ **Sleek Web Interface:** A beautiful, dark-mode Gradio web app with source citations, diagnostic readouts, and model toggles.
 - 🚀 **Universal AMD Support (Tested on MI300X):** While we extensively tested and optimized for the massive 192GB Instinct MI300X, ROCm-Pilot's hardware detection and setup guidance **works seamlessly across all ROCm-compatible AMD hardware** (including Radeon consumer GPUs like RX 7900 XTX and older Instinct accelerators).
-- 🧠 **Local Open-Weights Inference:** Run completely private, local open-weight models (like `Qwen2.5-Coder-7B` up to `72B`) directly on your AMD GPU VRAM using HuggingFace Accelerate and PyTorch native integration.
+- 🧠 **Local Open-Weights Inference:** Run completely private, local open-weight models (like `gemma-4-12b-it` up to `31b-it`) directly on your AMD GPU VRAM using HuggingFace Accelerate and PyTorch native integration.
 - ☁️ **Cloud API Integration:** Blazing-fast inference via Fireworks AI API, fully supporting next-gen models like `deepseek-v4-pro` and `glm-5p2`.
 - 📊 **Live AMD GPU Monitor:** Real-time VRAM, Temperature, and GPU Utilization progress bars with HTML color coding right inside the Web UI.
 - 🛡️ **Resilient AI Pipeline (OOM Failover):** If a local LLM or ghost process fills up all 192GB of your MI300X VRAM, the semantic embedding and cross-encoder models will gracefully catch the `OutOfMemoryError` and **dynamically fail over to the CPU** so the app never crashes!

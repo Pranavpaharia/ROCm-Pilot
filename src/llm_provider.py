@@ -75,7 +75,7 @@ class LocalGPUProvider(BaseLLMProvider):
     Supports both blocking and streaming generation via TextIteratorStreamer.
     """
 
-    DEFAULT_MODEL_ID = os.environ.get("LOCAL_MODEL_ID", "Qwen/Qwen2.5-7B-Instruct")
+    DEFAULT_MODEL_ID = os.environ.get("LOCAL_MODEL_ID", "google/gemma-4-12b-it")
 
     def __init__(self, model_id: Optional[str] = None):
         import torch
@@ -217,7 +217,7 @@ def get_provider(provider_type: str, model: Optional[str] = None) -> BaseLLMProv
         anything else for the Fireworks cloud provider.
     model : str, optional
         Model identifier.  For *local* mode this overrides the default
-        ``LOCAL_MODEL_ID`` env-var / ``Qwen/Qwen2.5-7B-Instruct`` fallback.
+        ``LOCAL_MODEL_ID`` env-var / ``google/gemma-4-12b-it`` fallback.
         For *cloud* mode this is forwarded to ``FireworksProvider``.
     """
     if provider_type in ("local", "local_gpu"):

@@ -14,7 +14,7 @@
 4. Cites its sources so every recommendation is verifiable
 
 **Target Hardware:** AMD Instinct MI300X (GPU compute via ROCm 6.x / 7.2)
-**LLM Backend:** Fireworks AI (cloud) or local Qwen 2.5-7B on AMD GPU
+**LLM Backend:** Fireworks AI (cloud) or local Gemma 4 12B on AMD GPU
 **Vector Store:** ChromaDB (persistent, local)
 **Embeddings:** sentence-transformers on AMD GPU via ROCm
 
@@ -194,8 +194,8 @@ ROCm-Pilot/
 - `FireworksProvider(BaseLLMProvider)` -> Wraps Fireworks AI API (OpenAI-compatible endpoint).
   - `__init__(model)` -> Stores model identifier.
   - `chat(messages, stream)` -> Delegates to `src.fireworks_client.chat()`.
-- `LocalGPUProvider(BaseLLMProvider)` -> Runs Qwen 2.5 locally on AMD GPU via HuggingFace `transformers`.
-  - `DEFAULT_MODEL_ID = os.environ.get("LOCAL_MODEL_ID", "Qwen/Qwen2.5-7B-Instruct")`
+- `LocalGPUProvider(BaseLLMProvider)` -> Runs Gemma 4 locally on AMD GPU via HuggingFace `transformers`.
+  - `DEFAULT_MODEL_ID = os.environ.get("LOCAL_MODEL_ID", "google/gemma-4-12b-it")`
   - `__init__(model_id=None)` -> Loads tokenizer, model (fp16), and pipeline on `device_map="auto"`.
   - Logs GPU diagnostics (device name, VRAM allocated/reserved, HIP version) and model size.
   - `chat(messages, stream=False, max_new_tokens=512)` -> Supports both blocking and streaming generation via `TextIteratorStreamer`.
@@ -406,7 +406,7 @@ __init__.py
 | `requests>=2.31.0` | HTTP requests (unused currently) | -- |
 | `tqdm>=4.65.0` | Progress bars | `scraper.py`, `chunker.py`, `embedder.py` |
 | `gradio>=4.0.0` | Web UI framework | `app_web.py` |
-| `transformers==4.45.2` | Local LLM inference (Qwen 2.5) | `llm_provider.py` |
+| `transformers==4.45.2` | Local LLM inference (Gemma 4) | `llm_provider.py` |
 | `accelerate>=0.25.0` | Model loading optimization | (not yet used) |
 | `bitsandbytes>=0.41.0` | 4-bit model quantization | (not yet used) |
 | `ipywidgets>=8.0.0` | Jupyter widgets | (not yet used) |
@@ -432,7 +432,7 @@ __init__.py
 python3 -m src.agent --db-path data/chroma_db [--auto-approve]
 ```
 - Reads from local ChromaDB
-- Uses Fireworks AI (cloud) or local Qwen 2.5
+- Uses Fireworks AI (cloud) or local Gemma 4
 - Interactive terminal session with tool execution support
 
 ### Mode B: Web UI (Local/Remote)
@@ -451,7 +451,7 @@ bash startup_script.sh
 ```
 - Full system preparation (ROCm, PyTorch, permissions)
 - Runs `setup.sh` to build knowledge base
-- Pre-caches all ML models (embeddings, reranker, Qwen 2.5)
+- Pre-caches all ML models (embeddings, reranker, Gemma 4)
 - Starts Gradio Web UI as a `systemd` service on port 7860
 - Accessible at `http://<droplet-ip>:7860`
 
@@ -474,7 +474,7 @@ python3 diagnose_system.py [--compact]
 
 3. **Table preservation:** Markdown tables (compatibility matrices, version info) are detected and preserved as intact blocks during chunking -- critical for ROCm documentation which is heavy on tables.
 
-4. **Dual LLM support:** Cloud (Fireworks AI) for convenience, local (Qwen 2.5 on AMD GPU) for offline/air-gapped scenarios.
+4. **Dual LLM support:** Cloud (Fireworks AI) for convenience, local (Gemma 4 on AMD GPU) for offline/air-gapped scenarios.
 
 5. **Tool execution:** The LLM can request diagnostic commands (`rocm-smi`, `rocminfo`, etc.) to gather real-time system info, with optional auto-approve mode.
 

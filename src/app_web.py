@@ -162,7 +162,7 @@ class WebAgent:
             self.model_name = model_name
         elif provider_type == "local":
             self.model_name = os.environ.get(
-                "LOCAL_MODEL_ID", "Qwen/Qwen2.5-7B-Instruct"
+                "LOCAL_MODEL_ID", "google/gemma-4-12b-it"
             )
         else:
             self.model_name = "accounts/fireworks/models/deepseek-v4-pro"
@@ -709,13 +709,13 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
                     )
                     local_model_dropdown = gr.Dropdown(
                         choices=[
-                            "Qwen/Qwen2.5-Coder-7B-Instruct",
-                            "Qwen/Qwen2.5-14B-Instruct",
-                            "Qwen/Qwen2.5-Coder-32B-Instruct",
-                            "Qwen/Qwen2.5-72B-Instruct",
+                            "google/gemma-4-4b-it",
+                            "google/gemma-4-12b-it",
+                            "google/gemma-4-26b-it-moe",
+                            "google/gemma-4-31b-it",
                             "meta-llama/Meta-Llama-3.1-70B-Instruct"
                         ],
-                        value="Qwen/Qwen2.5-Coder-7B-Instruct",
+                        value="google/gemma-4-12b-it",
                         label="Local Model (MI300X VRAM)",
                         visible=False,
                         interactive=True,
@@ -786,7 +786,7 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
             'AMD Compute Pipeline: '
             'GPU-accelerated Embeddings (sentence-transformers) | '
             'Cross-Encoder Reranking (ms-marco) | '
-            'Local LLM Inference (Qwen 2.5) -- '
+            'Local LLM Inference (Gemma 4) -- '
             'all running on <strong style="color: #ed1c24;">AMD Instinct</strong> via ROCm'
             '</div>'
         )
