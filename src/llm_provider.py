@@ -87,7 +87,7 @@ class LocalGPUProvider(BaseLLMProvider):
         self.tokenizer = AutoTokenizer.from_pretrained(model_id)
         self.model = AutoModelForCausalLM.from_pretrained(
             model_id,
-            torch_dtype=torch.float16,
+            torch_dtype=torch.bfloat16,
             device_map="auto",
         )
         self.pipe = pipeline(
