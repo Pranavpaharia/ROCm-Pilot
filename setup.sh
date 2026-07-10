@@ -16,8 +16,8 @@ echo ""
 # 1. Install ROCm-compatible PyTorch if not already available
 PYTHON_BIN="${PYTHON_CMD:-python3}"
 echo "[1/4] Checking for PyTorch..."
-if "$PYTHON_BIN" -c "import torch, torchvision; assert torch.cuda.is_available() and hasattr(torch.version, 'hip') and torch.version.hip is not None" 2>/dev/null; then
-    echo "  ✓ PyTorch with ROCm support and torchvision are already installed. Skipping installation..."
+if "$PYTHON_BIN" -c "import torch; assert torch.cuda.is_available() and hasattr(torch.version, 'hip') and torch.version.hip is not None" 2>/dev/null; then
+    echo "  ✓ PyTorch with ROCm support is already installed. Skipping installation..."
 else
     IS_DARWIN=$(uname -s | grep -i -q "Darwin" && echo "true" || echo "false")
     if [ "$IS_DARWIN" = "true" ]; then
@@ -29,11 +29,9 @@ else
         apt-get remove -y python3-torch python3-torchvision python3-torchaudio python3-typing-extensions 2>/dev/null || true
         echo "  ↓ Uninstalling any existing pip PyTorch versions..."
         "$PYTHON_BIN" -m pip uninstall -y torch torchvision torchaudio 2>/dev/null || true
-        echo "  ↓ Installing PyTorch + torchvision + torchaudio (ROCm 6.2 support)..."
+        echo "  ↓ Installing PyTorch (ROCm 6.2 support)..."
         "$PYTHON_BIN" -m pip install --break-system-packages --ignore-installed \
             torch==2.5.1+rocm6.2 \
-            torchvision==0.20.1+rocm6.2 \
-            torchaudio==2.5.1+rocm6.2 \
             --index-url https://download.pytorch.org/whl/rocm6.2
         echo "✅ PyTorch ROCm installed"
     fi
