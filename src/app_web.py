@@ -162,7 +162,7 @@ class WebAgent:
             self.model_name = model_name
         elif provider_type == "local":
             self.model_name = os.environ.get(
-                "LOCAL_MODEL_ID", "google/gemma-4-12b-it"
+                "LOCAL_MODEL_ID", "google/gemma-2-9b-it"
             )
         else:
             self.model_name = "accounts/fireworks/models/deepseek-v4-pro"
@@ -709,13 +709,12 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
                     )
                     local_model_dropdown = gr.Dropdown(
                         choices=[
-                            "google/gemma-4-4b-it",
-                            "google/gemma-4-12b-it",
-                            "google/gemma-4-26b-it-moe",
-                            "google/gemma-4-31b-it",
+                            "google/gemma-2-2b-it",
+                            "google/gemma-2-9b-it",
+                            "google/gemma-2-27b-it",
                             "meta-llama/Meta-Llama-3.1-70B-Instruct"
                         ],
-                        value="google/gemma-4-12b-it",
+                        value="google/gemma-2-9b-it",
                         label="Local Model (MI300X VRAM)",
                         visible=False,
                         interactive=True,
