@@ -1,6 +1,6 @@
 # 🚀 ROCm-Pilot: AI-Powered AMD Setup Assistant
 
-> An intelligent RAG agent that helps developers set up AI/ML workloads on AMD hardware — grounded in official ROCm documentation.
+> An intelligent RAG agent that provides technical assistance to run AI/ML tools and workflows on AMD-based hardware — grounded in official ROCm documentation.
 
 **Built for:** [AMD Developer Hackathon ACT II](https://lablab.ai/ai-hackathons/amd-developer-hackathon-act-ii) — Track 3 (Unicorn)
 
@@ -12,7 +12,7 @@ Setting up AI and machine learning environments on AMD hardware is hard. Develop
 
 - Fragmented documentation across dozens of repos and websites
 - Complex version compatibility matrices (ROCm ↔ PyTorch ↔ GPU ↔ OS ↔ Kernel)
-- Different setup paths for Instinct (data center) vs. Radeon (consumer) GPUs
+- Different setup paths for **AMD Instinct™** (Data Center) vs. **AMD Radeon™ RX** (Consumer/Workstation) GPUs
 - Confusing CUDA-to-ROCm migration guidance
 
 ## 💡 The Solution
@@ -32,8 +32,9 @@ We've massively expanded ROCm-Pilot during the hackathon. Here is what's new:
 
 - 🖥️ **Sleek Web Interface:** A beautiful, dark-mode Gradio web app with source citations, diagnostic readouts, and model toggles.
 - 🚀 **Universal AMD Support (Tested on MI300X):** While we extensively tested and optimized for the massive 192GB Instinct MI300X, ROCm-Pilot's hardware detection and setup guidance **works seamlessly across all ROCm-compatible AMD hardware** (including Radeon consumer GPUs like RX 7900 XTX and older Instinct accelerators).
-- 🧠 **Local Open-Weights Inference:** Run completely private, local open-weight models (like `gemma-4-12b-it` up to `31b-it`) directly on your AMD GPU VRAM using HuggingFace Accelerate and PyTorch native integration.
+- 🧠 **Local Open-Weights Inference:** Run completely private, local open-weight models featuring **Google Gemma 4** directly on your AMD GPU VRAM using HuggingFace Accelerate and PyTorch native integration.
 - ☁️ **Cloud API Integration:** Blazing-fast inference via Fireworks AI API, fully supporting next-gen models like `deepseek-v4-pro` and `glm-5p2`.
+- 🍋 **Model Serving with Lemonade:** Automated deployment and robust model serving via the **Lemonade SDK**, seamlessly integrating partner tech with AMD hardware.
 - 📊 **Live AMD GPU Monitor:** Real-time VRAM, Temperature, and GPU Utilization progress bars with HTML color coding right inside the Web UI.
 - 🛡️ **Resilient AI Pipeline (OOM Failover):** If a local LLM or ghost process fills up all 192GB of your MI300X VRAM, the semantic embedding and cross-encoder models will gracefully catch the `OutOfMemoryError` and **dynamically fail over to the CPU** so the app never crashes!
 - 🤔 **Dynamic Reasoning UI:** Intercepts and beautifully formats hidden "Chain-of-Thought" reasoning streams (from models like DeepSeek Pro) into sleek HTML accordions.
