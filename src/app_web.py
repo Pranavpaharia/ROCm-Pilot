@@ -183,6 +183,9 @@ class WebAgent:
                 lines.append(f"Python: {data['python'].get('version', 'Unknown')}")
             if 'rocm' in data:
                 lines.append(f"ROCm Version: {data['rocm'].get('version', 'Unknown')}")
+            elif 'rocm_version' in data:
+                lines.append(f"ROCm Version: {data['rocm_version']}")
+                
             if 'gpus' in data:
                 gpus = data['gpus']
                 lines.append(f"GPUs Detected: {len(gpus)}")
@@ -190,14 +193,24 @@ class WebAgent:
                     lines.append(f"  GPU {i}: {gpu.get('model', 'Unknown')}")
                     if gpu.get('vram'):
                         lines.append(f"    VRAM: {gpu['vram']}")
+                    elif gpu.get('vram_gb'):
+                        lines.append(f"    VRAM: {gpu['vram_gb']} GB")
                     if gpu.get('temperature'):
                         lines.append(f"    Temp: {gpu['temperature']}")
                     if gpu.get('architecture'):
                         lines.append(f"    Arch: {gpu['architecture']}")
+                        
             if 'pytorch' in data:
                 pt = data['pytorch']
                 lines.append(f"PyTorch: {pt.get('version', 'N/A')}")
                 lines.append(f"  ROCm available: {pt.get('rocm_available', False)}")
+            elif 'pip_packages' in data:
+                lines.append(f"PyTorch: {data['pip_packages'].get('torch', 'N/A')}")
+            if 'pytorch_rocm' in data:
+                lines.append(f"  ROCm available: {data['pytorch_rocm'].get('available', False)}")
+            
+            if 'pytorch' in data:
+                pt = data['pytorch']
                 if pt.get('hip_version'):
                     lines.append(f"  HIP: {pt['hip_version']}")
             if 'packages' in data:
