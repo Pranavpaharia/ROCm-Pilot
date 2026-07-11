@@ -48,6 +48,7 @@ echo "  ↓ Installing additional dependencies..."
     "transformers>=4.45.2" \
     accelerate \
     openai tqdm ipywidgets \
+    python-dotenv \
     beautifulsoup4 lxml gradio
 echo "✅ Dependencies installed"
 echo ""

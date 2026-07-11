@@ -7,6 +7,10 @@ import os
 import logging
 import threading
 from typing import Generator, Union, List, Dict, Optional
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 logger = logging.getLogger("rocm_pilot.llm")
 
