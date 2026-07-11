@@ -21,6 +21,9 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         import openai
         
         use_local = os.environ.get('USE_LOCAL_LEMONADE', 'true').lower() == 'true'
+        if model and 'fireworks' in model.lower():
+            use_local = False
+            
         if use_local:
             logger.info("Using Local Lemonade SDK LLM")
             self.api_base = "http://localhost:8000/v1"
