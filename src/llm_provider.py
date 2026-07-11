@@ -89,6 +89,7 @@ class LocalGPUProvider(BaseLLMProvider):
             model_id,
             torch_dtype=torch.bfloat16,
             device_map="auto",
+            attn_implementation="eager",
         )
         self.pipe = pipeline(
             "text-generation",
@@ -166,8 +167,14 @@ class LocalGPUProvider(BaseLLMProvider):
 
     def _generate_full(self, prompt: str, max_new_tokens: int) -> str:
         """Blocking generation — returns the complete assistant reply."""
-        result = self.pipe(prompt, max_new_tokens=max_new_tokens, do_sample=True)
-        return result[0]["generated_text"][len(prompt):]
+        result = self.pipe(
+            prompt, 
+            max_new_tokens=max_new_tokens, 
+            do_sample=True, 
+            return_full_text=False,
+            pad_token_id=self.tokenizer.eos_token_id
+        )
+        return result[0]["generated_text"]
 
     def _generate_stream(
         self, prompt: str, max_new_tokens: int
@@ -190,6 +197,7 @@ class LocalGPUProvider(BaseLLMProvider):
             **inputs,
             "max_new_tokens": max_new_tokens,
             "do_sample": True,
+            "pad_token_id": self.tokenizer.eos_token_id,
             "streamer": streamer,
         }
 
