@@ -137,6 +137,25 @@ def get_retriever(
 
 
 # ---------------------------------------------------------------------------
+# BM25 Retriever handle
+# ---------------------------------------------------------------------------
+
+_bm25_data: Optional[Dict] = None
+
+def get_bm25_retriever(bm25_path: str = 'data/bm25_index.pkl') -> Optional[Dict]:
+    global _bm25_data
+    if _bm25_data is None:
+        import os, pickle
+        if os.path.exists(bm25_path):
+            with open(bm25_path, 'rb') as f:
+                _bm25_data = pickle.load(f)
+                logger.info(f"Loaded BM25 index with {len(_bm25_data['chunks'])} chunks")
+        else:
+            logger.warning(f"BM25 index not found at {bm25_path}")
+    return _bm25_data
+
+
+# ---------------------------------------------------------------------------
 # Retrieval (with optional Cross-Encoder reranking)
 # ---------------------------------------------------------------------------
 
@@ -220,7 +239,46 @@ def retrieve(
             'metadata': results['metadatas'][0][i],
             'distance': results['distances'][0][i],
             'id': results['ids'][0][i],
+            'source': 'chromadb',
         })
+
+    # --- Fetch BM25 candidates ---
+    bm25_formatted = []
+    bm25_data = get_bm25_retriever()
+    if bm25_data:
+        bm25_start = time.perf_counter()
+        query_tokens = query.lower().split()
+        scores = bm25_data['model'].get_scores(query_tokens)
+        
+        import numpy as np
+        top_k_indices = np.argsort(scores)[::-1][:fetch_k]
+        
+        for idx in top_k_indices:
+            if scores[idx] > 0:
+                chunk = bm25_data['chunks'][idx]
+                
+                # Apply filters manually for BM25
+                meta = chunk['metadata']
+                if doc_type_filter and meta.get('doc_type') != doc_type_filter:
+                    continue
+                if hardware_target_filter and meta.get('hardware_target') != hardware_target_filter:
+                    continue
+                    
+                bm25_formatted.append({
+                    'text': chunk['text'],
+                    'metadata': meta,
+                    'distance': -float(scores[idx]),
+                    'id': chunk['id'],
+                    'source': 'bm25',
+                })
+        logger.info("BM25 retrieval returned %d candidates in %.3f s", len(bm25_formatted), time.perf_counter() - bm25_start)
+        
+    # Merge results
+    seen_ids = {item['id'] for item in formatted}
+    for item in bm25_formatted:
+        if item['id'] not in seen_ids:
+            formatted.append(item)
+            seen_ids.add(item['id'])
 
     # Optional Cross-Encoder reranking
     if use_reranker and formatted:

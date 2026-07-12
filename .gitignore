@@ -1,6 +1,8 @@
 # Data (generated at runtime)
 data/raw_docs/
 data/chroma_db/
+data/bm25_index.pkl
+data/scrape_cache/
 
 # Python
 __pycache__/

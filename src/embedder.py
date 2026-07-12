@@ -130,6 +130,27 @@ def build_vector_store(
 
     print(f"✅ Vector store built: {collection.count()} chunks stored in {db_path}")
 
+    # --- BM25 SPARSE INDEXING ---
+    import pickle
+    from rank_bm25 import BM25Okapi
+    print("🧠 Building BM25 sparse index...")
+    
+    def tokenize(text):
+        return text.lower().split()
+        
+    tokenized_corpus = [tokenize(t) for t in texts]
+    bm25_model = BM25Okapi(tokenized_corpus)
+    
+    bm25_path = os.path.join(os.path.dirname(db_path), 'bm25_index.pkl')
+    with open(bm25_path, 'wb') as f:
+        data_to_save = {
+            'model': bm25_model,
+            'chunks': [{'id': ids[i], 'text': texts[i], 'metadata': metadatas[i]} for i in range(len(ids))]
+        }
+        pickle.dump(data_to_save, f)
+        
+    print(f"✅ BM25 sparse index built and saved to {bm25_path}")
+
 
 if __name__ == '__main__':
     from src.scraper import collect_documents

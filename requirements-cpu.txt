@@ -1,0 +1,4 @@
+# Standard CPU PyTorch (for Mac/Dev)
+torch
+torchvision
+torchaudio
