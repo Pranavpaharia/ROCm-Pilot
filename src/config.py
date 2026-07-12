@@ -15,7 +15,7 @@ class Config:
     DEFAULT_LLM_MODEL = os.getenv('LLM_MODEL', 'omlx/qwen3-coder-30b')
     
     # --- API Configuration ---
-    FIREWORKS_API_KEY = os.getenv('FIREWORKS_API_KEY', 'fw_Frwm71myTP8unXeR7Jxmcx')
+    FIREWORKS_API_KEY = os.getenv('FIREWORKS_API_KEY', '')
     LEMONADE_URL = os.getenv('LEMONADE_URL', 'http://localhost:4000/v1')
     
     # --- Vector Store Configuration ---
