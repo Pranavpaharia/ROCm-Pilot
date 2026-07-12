@@ -60,17 +60,19 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                     
                     if hasattr(delta, 'reasoning_content') and delta.reasoning_content:
                         if not in_reasoning:
-                            yield "<details><summary>🤔 <i>Thinking process...</i></summary><blockquote style='font-size: 0.9em; color: #94a3b8; border-left: 3px solid #10b981; padding-left: 10px; margin-top: 8px;'>\n"
+                            yield "> 🤔 **Thinking Process...**\n> "
                             in_reasoning = True
-                        yield delta.reasoning_content
-                    elif delta.content:
+                        # Replace newlines with blockquote continuation so it stays in the quote
+                        content = delta.reasoning_content.replace('\n', '\n> ')
+                        yield content
+                    elif hasattr(delta, 'content') and delta.content:
                         if in_reasoning:
-                            yield "\n</blockquote></details>\n\n"
+                            yield "\n\n"
                             in_reasoning = False
                         yield delta.content
                         
                 if in_reasoning:
-                    yield "\n</blockquote></details>\n\n"
+                    yield "\n\n"
             return generate()
         else:
             return response.choices[0].message.content

@@ -69,7 +69,7 @@ class WebAgent:
         self.tool_executor = ToolExecutor(auto_approve=False)
         self.provider: Optional[BaseLLMProvider] = None
         self.provider_type = "cloud"
-        self.model_name = "accounts/fireworks/models/deepseek-v2-pro"
+        self.model_name = "accounts/fireworks/models/deepseek-v4-pro"
         self.gpu_db = None
         self.gpu_context = ""
         self._initialized = False
@@ -709,11 +709,10 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
                     cloud_model_dropdown = gr.Dropdown(
                         choices=[
                             "accounts/fireworks/models/deepseek-v4-pro",
-                            "accounts/fireworks/models/glm-5p2",
-                            "accounts/fireworks/models/glm-5p1",
-                            "accounts/fireworks/models/kimi-k2p6",
-                            "accounts/fireworks/models/kimi-k2p5",
-                            "accounts/fireworks/models/gpt-oss-120b"
+                            "accounts/fireworks/models/deepseek-v3",
+                            "accounts/fireworks/models/llama-v3p3-70b-instruct",
+                            "accounts/fireworks/models/llama-v3p1-405b-instruct",
+                            "accounts/fireworks/models/qwen2p5-72b-instruct"
                         ],
                         value="accounts/fireworks/models/deepseek-v4-pro",
                         label="Cloud Model (Fireworks)",
@@ -734,7 +733,7 @@ def build_ui(db_path: str = 'data/chroma_db') -> gr.Blocks:
                         interactive=True,
                     )
                     provider_status = gr.Markdown(
-                        "Using **Cloud** provider: `accounts/fireworks/models/deepseek-v2-pro`",
+                        "Using **Cloud** provider: `accounts/fireworks/models/deepseek-v4-pro`",
                     )
 
                 # System Status
