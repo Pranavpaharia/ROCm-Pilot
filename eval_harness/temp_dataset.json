@@ -1,0 +1,57 @@
+{
+  "dataset": [
+    {
+      "question": "How do I install ROCm on Ubuntu 22.04?",
+      "expected_answer": "To install ROCm on Ubuntu 22.04, first update your system with 'sudo apt update && sudo apt upgrade'. Then add the ROCm repository using 'wget -qO - https://repo.radeon.com/rocm/rocm.gpg.key | sudo apt-key add -' and 'echo \"deb [arch=amd64] https://repo.radeon.com/rocm/apt/6.0/ubuntu stable main\" | sudo tee /etc/apt/sources.list.d/rocm.list'. Update package list with 'sudo apt update' and install ROCm with 'sudo apt install rocm-dev'.",
+      "ground_truth_facts": [
+        "ROCm installation requires adding the ROCm repository",
+        "Ubuntu 22.04 is supported",
+        "rocm-dev package is needed for development"
+      ],
+      "category": "ROCm installation procedures"
+    },
+    {
+      "question": "What is the difference between ROCm and CUDA?",
+      "expected_answer": "ROCm is AMD's open software platform for GPU computing, while CUDA is NVIDIA's parallel computing platform. ROCm supports AMD GPUs like Radeon and Instinct series, whereas CUDA is designed for NVIDIA GPUs. Both provide similar functionality for GPU acceleration but with different APIs and toolchains.",
+      "ground_truth_facts": [
+        "ROCm is AMD's platform",
+        "CUDA is NVIDIA's platform",
+        "ROCm supports Radeon and Instinct GPUs",
+        "CUDA supports NVIDIA GPUs"
+      ],
+      "category": "Matrix operations and GPU compatibility"
+    },
+    {
+      "question": "How do I set up vLLM on ROCm?",
+      "expected_answer": "To set up vLLM on ROCm, first ensure ROCm is installed. Then install Python dependencies with 'pip install vllm'. You'll need to set the environment variable 'HIP_VISIBLE_DEVICES=0' to specify the GPU. For inference, use 'vllm serve --model <model_path> --tensor-parallel-size 1'.",
+      "ground_truth_facts": [
+        "vLLM requires ROCm to be installed first",
+        "Environment variable HIP_VISIBLE_DEVICES is needed",
+        "vLLM supports ROCm for inference"
+      ],
+      "category": "vLLM setup and configuration"
+    },
+    {
+      "question": "What are the performance differences between Radeon VII and Instinct MI200?",
+      "expected_answer": "The Radeon VII has 16GB HBM2 memory and 4096 stream processors, while the Instinct MI200 has 64GB HBM2 memory and 13312 stream processors. The Instinct MI200 offers significantly higher compute performance and memory bandwidth, making it better for large-scale AI workloads. The Radeon VII is more suitable for gaming and general-purpose computing.",
+      "ground_truth_facts": [
+        "Radeon VII has 16GB HBM2 memory",
+        "Radeon VII has 4096 stream processors",
+        "Instinct MI200 has 64GB HBM2 memory",
+        "Instinct MI200 has 13312 stream processors"
+      ],
+      "category": "Radeon vs Instinct GPU comparisons"
+    },
+    {
+      "question": "How do I migrate CUDA code to ROCm?",
+      "expected_answer": "To migrate CUDA code to ROCm, first replace CUDA runtime APIs with ROCm equivalents like hipMalloc instead of cudaMalloc. Use the HIP library to port CUDA kernels to ROCm. Replace CUDA-specific libraries with ROCm alternatives such as rocBLAS for BLAS operations. Use the ROCm porting guide and tools to identify and fix CUDA-specific code patterns.",
+      "ground_truth_facts": [
+        "Replace cudaMalloc with hipMalloc",
+        "Use HIP library for kernel porting",
+        "Replace CUDA libraries with ROCm alternatives",
+        "Use ROCm porting tools and guides"
+      ],
+      "category": "CUDA to ROCm migration guidance"
+    }
+  ]
+}

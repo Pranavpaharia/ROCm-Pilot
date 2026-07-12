@@ -1,0 +1,543 @@
+{
+  "dataset": [
+    {
+      "question": "What are the exact steps to install ROCm 6.0 on Ubuntu 22.04 using the apt package manager, including the necessary repository configuration and package installation commands?",
+      "expected_answer": "To install ROCm 6.0 on Ubuntu 22.04 using apt, first enable the ROCm repository by adding the repository key and repository URL to the system. Run 'wget -qO - https://repo.radeon.com/rocm/rocm.gpg.key | sudo apt-key add -' to add the ROCm GPG key, then add the repository with 'echo \"deb [arch=amd64] https://repo.radeon.com/rocm/apt/6.0 jammy main\" | sudo tee /etc/apt/sources.list.d/rocm.list'. Update the package list with 'sudo apt update', and finally install ROCm with 'sudo apt install rocm-dev rocm-utils'. Additionally, ensure the system has the required kernel version (5.15 or higher) and reboot after installation to load the ROCm drivers properly.",
+      "ground_truth_facts": [
+        "ROCm 6.0 requires Ubuntu 22.04 Jammy as the base OS",
+        "The ROCm repository must be added using the GPG key https://repo.radeon.com/rocm/rocm.gpg.key",
+        "The repository URL for Ubuntu 22.04 is https://repo.radeon.com/rocm/apt/6.0 jammy main",
+        "The minimum kernel version required is 5.15 or higher",
+        "Installation requires the packages rocm-dev and rocm-utils for full functionality"
+      ],
+      "category": "ROCm installation procedures"
+    },
+    {
+      "question": "What are the specific commands needed to add a user to the video and render groups for ROCm GPU access on Ubuntu 20.04?",
+      "expected_answer": "To add a user to the video and render groups for ROCm GPU access on Ubuntu 20.04, you need to run the following commands: 'sudo usermod -aG video $USER' and 'sudo usermod -aG render $USER'. After executing these commands, the user must log out and log back in for the group membership changes to take effect. The video group provides access to video devices, while the render group grants access to graphics rendering capabilities required for ROCm operations.",
+      "ground_truth_facts": [
+        "Users must be added to the video and render groups to access ROCm GPU functionality",
+        "The usermod command with -aG flag is used to add users to groups",
+        "Group membership changes require user logout and login to take effect",
+        "The video group provides access to video devices for ROCm operations",
+        "The render group grants graphics rendering capabilities needed for ROCm"
+      ],
+      "category": "ROCm installation procedures"
+    },
+    {
+      "question": "How do you verify that ROCm is properly installed and functioning on an AMD GPU system using the rocminfo command?",
+      "expected_answer": "To verify ROCm installation with rocminfo, first ensure the ROCm stack is properly installed including the ROCm runtime, drivers, and necessary libraries. Then run the command 'rocminfo' in a terminal session. This command will display comprehensive information about the ROCm runtime environment, including the AMD GPU device details, driver version, compute capabilities, memory information, and ROCm software stack components. The output should show successful detection of AMD GPU hardware, proper ROCm version information, and no error messages indicating missing dependencies or driver issues. If the command executes successfully and shows GPU device information, it confirms that ROCm is properly installed and accessible to the system.",
+      "ground_truth_facts": [
+        "rocminfo is a command-line utility that displays ROCm runtime information and GPU device details",
+        "rocminfo should show successful detection of AMD GPU hardware when ROCm is properly installed",
+        "rocminfo output includes ROCm version information, driver version, and GPU compute capabilities"
+      ],
+      "category": "ROCm installation procedures"
+    },
+    {
+      "question": "What are the exact steps to install ROCm PyTorch via pip on an AMD GPU system with Ubuntu 20.04?",
+      "expected_answer": "To install ROCm PyTorch via pip on Ubuntu 20.04 with AMD GPU support, first ensure ROCm is properly installed by running 'sudo apt update && sudo apt install rocm-dev' and verify with 'rocminfo'. Then install PyTorch with 'pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm5.4.2'. Verify the installation by running 'python3 -c \"import torch; print(torch.__version__); print(torch.cuda.is_available())\"' which should show ROCm support as True.",
+      "ground_truth_facts": [
+        "ROCm PyTorch requires ROCm platform to be installed first",
+        "The PyTorch pip installation must use the specific ROCm index URL",
+        "Ubuntu 20.04 is a supported OS for ROCm PyTorch installation"
+      ],
+      "category": "ROCm installation procedures"
+    },
+    {
+      "question": "After installing ROCm on Ubuntu 20.04, the amdkfd module is not loading automatically at boot. What steps should I take to troubleshoot and resolve this issue?",
+      "expected_answer": "First, verify the module is available by running 'ls /lib/modules/$(uname -r)/kernel/drivers/misc/amdgpu/amdkfd.ko'. Check if the module is blacklisted by running 'grep -i amdkfd /etc/modprobe.d/*.conf'. If blacklisted, remove or comment out the blacklist entry. Add 'amdkfd' to /etc/modules to ensure it loads at boot. Verify the module loads manually with 'sudo modprobe amdkfd'. Check kernel logs with 'dmesg | grep -i amdkfd' for any error messages. Ensure your GPU is supported and the correct kernel version is installed. If the module still fails to load, verify the GPU is properly seated and the system has adequate power supply. You may also need to update the kernel to a version that supports your GPU's compute unit architecture.",
+      "ground_truth_facts": [
+        "The amdkfd module must be explicitly loaded or configured to load at boot",
+        "The module can be blacklisted in /etc/modprobe.d/ configuration files",
+        "Adding the module name to /etc/modules ensures it loads at boot"
+      ],
+      "category": "ROCm installation procedures"
+    },
+    {
+      "question": "What are the key steps to install and configure Docker for ROCm containers on an AMD GPU system?",
+      "expected_answer": "To install Docker for ROCm containers, first ensure your system meets the minimum requirements including a supported AMD GPU and ROCm-compatible OS (Ubuntu 20.04 or 22.04). Install Docker using the official repository method or package manager, then add the ROCm repository and install the ROCm Docker package. Configure Docker to use the ROCm runtime by adding the ROCm runtime to the Docker daemon configuration file (/etc/docker/daemon.json) with the line \"default-runtime\": \"rocm\". Restart the Docker service after configuration changes. Verify the installation by running a test container with the ROCm runtime and checking that GPU devices are accessible within the container. Additionally, ensure that the user has been added to the docker group and that the ROCm drivers are properly installed and loaded on the host system.",
+      "ground_truth_facts": [
+        "Docker installation for ROCm requires a supported AMD GPU and ROCm-compatible OS such as Ubuntu 20.04 or 22.04",
+        "The ROCm Docker runtime must be configured in /etc/docker/daemon.json with proper default-runtime settings",
+        "Users must be added to the docker group and ROCm drivers must be properly installed on the host system"
+      ],
+      "category": "ROCm installation procedures"
+    },
+    {
+      "question": "What is the correct procedure to completely remove a previous ROCm installation from an Ubuntu system before installing a new version?",
+      "expected_answer": "To completely remove a previous ROCm installation on Ubuntu, first uninstall the ROCm packages using 'sudo apt remove --purge rocm-*' or 'sudo apt remove --purge rocm-* rocm-dev-* rocm-utils-*', then remove the ROCm repository configuration with 'sudo rm -f /etc/apt/sources.list.d/rocm.list', clean the package cache with 'sudo apt clean' and 'sudo apt update', and finally remove any remaining ROCm directories such as /opt/rocm and /etc/rocm using 'sudo rm -rf /opt/rocm /etc/rocm'. It's also recommended to reboot the system before installing the new ROCm version to ensure all drivers are properly unloaded.",
+      "ground_truth_facts": [
+        "The ROCm uninstallation process requires removing packages with apt remove --purge command",
+        "The ROCm repository configuration file must be manually removed from /etc/apt/sources.list.d/",
+        "Complete removal includes deleting /opt/rocm and /etc/rocm directories to prevent conflicts",
+        "System reboot is recommended after complete ROCm removal before installing new version"
+      ],
+      "category": "ROCm installation procedures"
+    },
+    {
+      "question": "Do kernel headers need to be installed for ROCm DKMS to function properly on Ubuntu 20.04?",
+      "expected_answer": "Yes, kernel headers are required for ROCm DKMS to function properly on Ubuntu 20.04. When ROCm is installed with DKMS (Dynamic Kernel Module Support), it needs the kernel headers to compile and load the necessary kernel modules for GPU compute functionality. Without the kernel headers, the DKMS process cannot build the required kernel modules, resulting in ROCm not being able to access GPU hardware. The kernel headers must match the running kernel version, and they can be installed using 'sudo apt install linux-headers-$(uname -r)' or by installing the specific version that matches your kernel.",
+      "ground_truth_facts": [
+        "ROCm DKMS requires kernel headers to compile and load GPU kernel modules",
+        "Kernel headers must match the running kernel version for DKMS to work properly",
+        "Ubuntu 20.04 users need to install linux-headers-$(uname -r) package for ROCm DKMS support"
+      ],
+      "category": "ROCm installation procedures"
+    },
+    {
+      "question": "What are the exact steps required to install and configure ROCm 6.0 on RHEL/CentOS 9 for GPU computing workloads?",
+      "expected_answer": "To install ROCm 6.0 on RHEL/CentOS 9, first enable the ROCm repository by adding the official AMD repository configuration using 'dnf config-manager --add-repo https://repo.radeon.com/amdgpu/6.0/rhel/9.0/x86_64/amdgpu.repo'. Then update the package manager with 'dnf update -y'. Install the ROCm stack with 'dnf install rocm-dev rocm-utils -y'. Configure the system by adding the ROCm user group with 'groupadd -r rocm' and adding the user to this group. Verify the installation by running 'rocminfo' to check GPU detection and 'rocm-smi' to monitor GPU status. Ensure the system has the required kernel version (5.15+) and that the GPU is properly seated and powered. Finally, reboot the system to complete the configuration and verify that the ROCm runtime is properly initialized.",
+      "ground_truth_facts": [
+        "ROCm 6.0 requires RHEL/CentOS 9 with kernel version 5.15 or higher",
+        "The ROCm repository must be added using dnf config-manager with the official AMD repository URL",
+        "Installation requires the rocm-dev and rocm-utils packages to be installed via dnf",
+        "The ROCm user group must be created and users must be added to this group for proper access",
+        "System reboot is required to complete the ROCm configuration and initialization"
+      ],
+      "category": "ROCm installation procedures"
+    },
+    {
+      "question": "How can you verify that GPUs are properly initialized and recognized by the ROCm stack using rocm-smi command?",
+      "expected_answer": "To verify GPU initialization with rocm-smi, run the command 'rocm-smi --showall' or 'rocm-smi -a' to display comprehensive information about all ROCm-compatible GPUs. The output should show device information including GPU model names, driver versions, memory usage, temperature readings, and power consumption. If GPUs are properly initialized, you'll see status indicators showing 'OK' or 'ONLINE' for each detected GPU, along with their unique identifiers and compute capabilities. The command should also display ROCm version information and system-level GPU statistics. If any GPU shows 'OFFLINE' or 'ERROR' status, it indicates initialization problems that may require checking driver installation, PCIe connections, or system configuration.",
+      "ground_truth_facts": [
+        "rocm-smi command is the standard tool for monitoring and checking ROCm GPU initialization status",
+        "rocm-smi --showall or rocm-smi -a provides comprehensive GPU information including status, model, and driver details",
+        "Properly initialized GPUs will show 'OK', 'ONLINE', or similar status indicators in rocm-smi output"
+      ],
+      "category": "ROCm installation procedures"
+    },
+    {
+      "question": "What is rocBLAS and its CUDA equivalent?",
+      "expected_answer": "rocBLAS is AMD's implementation of the Basic Linear Algebra Subprograms (BLAS) library designed for GPU computing on AMD GPUs. It provides optimized linear algebra operations for AMD Radeon and Instinct GPUs, supporting both single and double precision floating-point operations. The CUDA equivalent of rocBLAS is cuBLAS, which is NVIDIA's implementation of the BLAS library for GPU computing on NVIDIA GPUs. Both libraries provide similar functionality for matrix operations, vector operations, and linear algebra computations, but are optimized for their respective GPU architectures and compute platforms.",
+      "ground_truth_facts": [
+        "rocBLAS is AMD's implementation of the Basic Linear Algebra Subprograms (BLAS) library",
+        "rocBLAS is designed for GPU computing on AMD GPUs including Radeon and Instinct series",
+        "The CUDA equivalent of rocBLAS is cuBLAS which is NVIDIA's BLAS implementation",
+        "Both rocBLAS and cuBLAS provide optimized linear algebra operations for their respective GPU platforms"
+      ],
+      "category": "Matrix operations and GPU compatibility"
+    },
+    {
+      "question": "What floating-point datatypes are natively supported on the MI300X GPU for matrix operations, and what are the specific requirements for using BF16 and FP8 formats?",
+      "expected_answer": "The MI300X GPU natively supports FP16 (half-precision) and BF16 (bfloat16) floating-point formats for matrix operations. FP16 is fully supported for all matrix computation operations including GEMM, and is the default format for many AI workloads. BF16 support requires specific software stack enabling, including ROCm 6.0+ and appropriate driver support, with BF16 operations typically being executed in FP32 precision internally for accuracy. FP8 support is not natively available on MI300X hardware but can be emulated through software libraries or specialized AI frameworks that convert FP8 to FP16/FP32 for execution. The MI300X's Matrix Memory Controller (MMC) and Tensor Core units are optimized for FP16 and BF16 operations, with BF16 offering better precision than FP16 for AI training workloads while maintaining similar performance characteristics.",
+      "ground_truth_facts": [
+        "MI300X GPU natively supports FP16 and BF16 floating-point formats",
+        "BF16 support requires ROCm 6.0+ and specific driver enabling",
+        "FP8 is not natively supported on MI300X but can be emulated",
+        "MI300X Matrix Memory Controller is optimized for FP16 and BF16 operations",
+        "BF16 operations are typically executed in FP32 precision internally"
+      ],
+      "category": "Matrix operations and GPU compatibility"
+    },
+    {
+      "question": "How can memory alignment and data layout optimizations improve matrix multiplication performance on AMD GPUs running ROCm, and what specific ROCm libraries should be utilized for optimal results?",
+      "expected_answer": "Matrix multiplication performance on AMD GPUs can be significantly improved through proper memory alignment and data layout optimization. Memory should be aligned to 4KB boundaries for optimal memory access patterns, and matrices should be stored in row-major order with dimensions that are multiples of 16 for efficient register usage. The AMD ROCm platform provides several optimized libraries including rocBLAS for basic linear algebra operations, which automatically handles memory alignment and uses optimized kernel implementations. Additionally, the hipBLAS library offers high-performance matrix operations with support for batched operations and strided batch operations. For advanced optimization, developers should consider using the AMD Library for Linear Algebra (rocsolver) and the AMD GPU Open Source Software (GOS) stack, which includes optimized memory management and kernel scheduling. The AMD GPU kernel compiler (hipcc) with appropriate flags like -O3 and --amdgpu-target=gfx900/gfx906/gfx908 can further enhance performance by enabling specific GPU architecture optimizations.",
+      "ground_truth_facts": [
+        "AMD ROCm provides rocBLAS library for optimized matrix multiplication operations",
+        "Memory alignment to 4KB boundaries improves memory access patterns on AMD GPUs",
+        "Matrix dimensions should be multiples of 16 for optimal register usage in AMD GPU kernels"
+      ],
+      "category": "Matrix operations and GPU compatibility"
+    },
+    {
+      "question": "How does hipBLAS enable portable linear algebra operations across different GPU architectures in the AMD ROCm ecosystem?",
+      "expected_answer": "hipBLAS is AMD's implementation of the BLAS (Basic Linear Algebra Subprograms) library that provides portable linear algebra operations for GPU computing within the ROCm software stack. It enables code portability by offering the same API as standard BLAS libraries but with AMD GPU-specific optimizations. hipBLAS supports various GPU architectures through ROCm's hardware abstraction layer, allowing developers to write linear algebra code that can run efficiently on different AMD GPUs without modification. The library handles the underlying GPU memory management, kernel scheduling, and optimization for specific GPU architectures, making it possible to achieve high performance on AMD GPUs while maintaining compatibility with existing BLAS-based codebases.",
+      "ground_truth_facts": [
+        "hipBLAS is AMD's implementation of BLAS for GPU computing in the ROCm ecosystem",
+        "hipBLAS provides API compatibility with standard BLAS libraries for code portability",
+        "hipBLAS leverages ROCm's hardware abstraction layer to support multiple AMD GPU architectures"
+      ],
+      "category": "Matrix operations and GPU compatibility"
+    },
+    {
+      "question": "How does the memory bandwidth requirement differ between single-precision and double-precision matrix multiplication operations on AMD Radeon Pro GPUs, and what impact does this have on performance scaling?",
+      "expected_answer": "Single-precision matrix multiplication on AMD Radeon Pro GPUs typically requires approximately half the memory bandwidth of double-precision operations due to the reduced data size (4 bytes vs 8 bytes per element). This bandwidth difference significantly impacts performance scaling, as single-precision operations can achieve higher throughput and better utilization of the GPU's memory subsystem. On AMD GPUs with high memory bandwidth capabilities like the Radeon Pro VII, single-precision operations can approach peak performance more readily than double-precision operations, which are more bandwidth-constrained. The memory bandwidth efficiency is further influenced by the specific GPU architecture's memory hierarchy and cache organization, with newer architectures like RDNA 2 showing improved memory bandwidth efficiency for both precision types compared to older GCN architectures.",
+      "ground_truth_facts": [
+        "Single-precision matrix operations require half the memory bandwidth of double-precision operations due to 4-byte vs 8-byte data sizes",
+        "AMD Radeon Pro GPUs show better performance scaling for single-precision operations compared to double-precision operations",
+        "Memory bandwidth constraints significantly impact double-precision matrix multiplication performance on AMD GPUs"
+      ],
+      "category": "Matrix operations and GPU compatibility"
+    },
+    {
+      "question": "How do AMD CDNA architecture GPUs implement tensor core functionality, and what are the key differences from NVIDIA's tensor cores in terms of performance and precision?",
+      "expected_answer": "AMD CDNA architecture GPUs implement tensor core functionality through their Matrix Processing Units (MPUs) which are part of the CDNA 2 and CDNA 3 architectures. These MPUs provide tensor core equivalent capabilities with support for FP64, FP32, FP16, and INT8 operations. Unlike NVIDIA's tensor cores which are dedicated hardware units optimized for mixed-precision matrix operations, AMD's approach integrates tensor operations within their existing compute units. The key differences include: 1) AMD's tensor operations are implemented as 2x2 matrix operations with 16-bit precision, 2) They support both FP16 and INT8 operations with 2x2 matrix multiplication, 3) The performance characteristics differ from NVIDIA's tensor cores due to architectural differences in memory bandwidth and compute unit organization, 4) AMD's tensor cores can achieve up to 128 TFLOPS for FP64 operations on some CDNA 2 cards, and 256 TFLOPS on CDNA 3 cards, with different performance characteristics for mixed-precision operations compared to NVIDIA's tensor cores.",
+      "ground_truth_facts": [
+        "AMD CDNA architecture GPUs use Matrix Processing Units (MPUs) to implement tensor core equivalent functionality",
+        "CDNA 2 and CDNA 3 architectures support FP64, FP32, FP16, and INT8 operations through their tensor core equivalents",
+        "AMD's tensor core implementation differs from NVIDIA's dedicated tensor core hardware units",
+        "CDNA 2 cards can achieve up to 128 TFLOPS for FP64 operations with tensor core equivalent functionality",
+        "CDNA 3 cards can achieve up to 256 TFLOPS for FP64 operations with tensor core equivalent functionality"
+      ],
+      "category": "Matrix operations and GPU compatibility"
+    },
+    {
+      "question": "How does AMD ROCm support sparse matrix operations in its GPU computing framework, and what are the key limitations compared to dense matrix operations?",
+      "expected_answer": "AMD ROCm provides sparse matrix support through the ROCm Software Stack, including libraries like rocSPARSE that offer sparse matrix-vector and sparse matrix-matrix operations. The framework supports various sparse matrix formats such as CSR, COO, and ELLPACK, enabling efficient computation on AMD GPUs. However, ROCm's sparse matrix performance is generally limited by the availability of optimized kernels for specific sparse patterns, and the sparse matrix operations typically require more memory overhead than their dense counterparts. Additionally, sparse matrix support in ROCm is less mature compared to NVIDIA's cuSPARSE library, with fewer optimization opportunities and limited automatic sparsity detection capabilities.",
+      "ground_truth_facts": [
+        "ROCm includes rocSPARSE library for sparse matrix operations",
+        "ROCm supports CSR, COO, and ELLPACK sparse matrix formats",
+        "ROCm's sparse matrix performance is less mature compared to NVIDIA cuSPARSE"
+      ],
+      "category": "Matrix operations and GPU compatibility"
+    },
+    {
+      "question": "How does rocALUTION's support for AMD GPUs compare to its compatibility with NVIDIA GPUs in terms of sparse linear algebra operations?",
+      "expected_answer": "rocALUTION is specifically designed for AMD GPUs and leverages ROCm (Radeon Open Compute platform) to provide sparse linear algebra capabilities. Unlike NVIDIA's cuSPARSE library which is optimized for CUDA-based GPUs, rocALUTION utilizes AMD's native GPU computing infrastructure and supports various sparse matrix formats including CSR, COO, and ELLPACK. It provides implementations of iterative solvers like CG, BiCGSTAB, and GMRES that are optimized for AMD's GPU architecture, making it a direct alternative to NVIDIA's sparse linear algebra libraries for users working within the AMD ROCm ecosystem.",
+      "ground_truth_facts": [
+        "rocALUTION is built specifically for AMD GPUs and ROCm platform",
+        "It provides sparse linear algebra operations optimized for AMD GPU architecture",
+        "rocALUTION supports iterative solvers like CG, BiCGSTAB, and GMRES for sparse matrices"
+      ],
+      "category": "Matrix operations and GPU compatibility"
+    },
+    {
+      "question": "How does mixed precision training on ROCm platforms compare to FP32 training in terms of performance and memory usage for large matrix operations?",
+      "expected_answer": "Mixed precision training on ROCm platforms provides significant performance improvements and reduced memory usage compared to FP32 training for large matrix operations. ROCm's support for FP16 tensor cores enables up to 2x faster training speeds and 2x memory savings, allowing larger batch sizes and model sizes to be processed. The hardware-accelerated mixed precision operations maintain numerical stability through gradient scaling and dynamic loss scaling techniques, making it ideal for large-scale AI workloads on AMD GPUs.",
+      "ground_truth_facts": [
+        "ROCm supports FP16 tensor cores for accelerated mixed precision training",
+        "Mixed precision training on ROCm provides 2x memory savings compared to FP32",
+        "ROCm's mixed precision implementation includes gradient scaling for numerical stability"
+      ],
+      "category": "Matrix operations and GPU compatibility"
+    },
+    {
+      "question": "How can you use rocprof to profile the execution time and memory bandwidth of matrix multiplication operations on AMD GPUs, and what specific metrics should you collect to evaluate GPU utilization and efficiency?",
+      "expected_answer": "To profile matrix multiplication operations using rocprof on AMD GPUs, you should run rocprof with the --kernel-name option to capture specific kernel executions, and use --metrics to collect key performance indicators. Essential metrics include: 'gpu_occupancy' to measure kernel occupancy percentage, 'sm__cycles_active' for active cycles, 'l1_cache_hit' for cache efficiency, 'memory_throughput' for bandwidth utilization, and 'achieved_occupancy' to assess how well the GPU cores are utilized. You can also collect 'inst_fp_32' for floating-point operations count and 'l2_cache_hit' for L2 cache performance. The profiling should be run with --rocm-path to ensure proper AMD GPU driver integration, and --output-format json for structured data collection that can be parsed for benchmark analysis.",
+      "ground_truth_facts": [
+        "rocprof is AMD's profiling tool specifically designed for ROCm platform GPU workloads",
+        "Matrix multiplication kernels can be profiled using --kernel-name to target specific operations",
+        "Key metrics for GPU utilization include gpu_occupancy, sm__cycles_active, and memory_throughput"
+      ],
+      "category": "Matrix operations and GPU compatibility"
+    },
+    {
+      "question": "What are the specific requirements and steps needed to successfully install vLLM for ROCm using pip, and what are the key considerations for GPU compatibility?",
+      "expected_answer": "To install vLLM for ROCm using pip, you must first ensure your system has ROCm 5.6 or later installed with compatible AMD GPUs (such as Radeon VII, MI50, MI100, or MI200 series). The installation requires Python 3.8-3.11 and pip 21.0 or later. You need to install the ROCm PyTorch version (torch 2.1.0+rocm5.6) before installing vLLM. The command 'pip install vllm' will install the ROCm-optimized version automatically when the correct environment is set up. Important considerations include setting the proper environment variables (HIP_VISIBLE_DEVICES, ROCM_HOME), ensuring the correct CUDA toolkit version is not conflicting with ROCm, and verifying that the ROCm runtime libraries are properly linked. The installation process will automatically detect ROCm support and compile the necessary kernels for AMD GPUs.",
+      "ground_truth_facts": [
+        "vLLM requires ROCm 5.6 or later for AMD GPU support",
+        "The installation process automatically detects ROCm and compiles ROCm-optimized kernels",
+        "vLLM requires Python 3.8-3.11 and pip 21.0 or later for successful installation",
+        "ROCm PyTorch version (torch 2.1.0+rocm5.6) must be installed before vLLM",
+        "Environment variables like HIP_VISIBLE_DEVICES and ROCM_HOME must be properly configured"
+      ],
+      "category": "CUDA to ROCm migration guidance"
+    },
+    {
+      "question": "What environment variable must be set to control which AMD GPUs are visible to vLLM when running inference on ROCm?",
+      "expected_answer": "The HIP_VISIBLE_DEVICES environment variable must be set to control which AMD GPUs are visible to vLLM. This variable works similarly to CUDA_VISIBLE_DEVICES but is specific to ROCm. When set, it restricts the GPU devices that vLLM will use for inference operations. For example, setting HIP_VISIBLE_DEVICES=0,1 will make only the first two GPUs visible to vLLM, while setting HIP_VISIBLE_DEVICES=2 will make only the third GPU visible. This is particularly important in multi-GPU ROCm environments where you want to isolate specific GPUs for vLLM workloads.",
+      "ground_truth_facts": [
+        "HIP_VISIBLE_DEVICES is the environment variable used to control GPU visibility in ROCm environments",
+        "vLLM uses HIP_VISIBLE_DEVICES to restrict which AMD GPUs are available for inference operations",
+        "HIP_VISIBLE_DEVICES works similarly to CUDA_VISIBLE_DEVICES but is specific to ROCm platform"
+      ],
+      "category": "CUDA to ROCm migration guidance"
+    },
+    {
+      "question": "How do you configure the tensor parallel size when running vLLM on ROCm GPUs, and what are the key considerations for optimal performance?",
+      "expected_answer": "To configure tensor parallel size in vLLM on ROCm GPUs, you need to set the --tensor-parallel-size parameter when launching the vLLM server. For ROCm, the tensor parallel size should typically match the number of GPUs in your system or be set to a divisor of that number for multi-GPU setups. The key considerations include ensuring that your ROCm version supports the desired tensor parallel size, verifying that the model architecture is compatible with tensor parallel execution, and setting the appropriate number of GPUs per node to avoid resource contention. For optimal performance, the tensor parallel size should align with the memory capacity of individual GPUs and the model's layer configuration to maintain balanced workload distribution across GPUs.",
+      "ground_truth_facts": [
+        "vLLM supports tensor parallel execution on ROCm GPUs through the --tensor-parallel-size parameter",
+        "The tensor parallel size should typically match the number of ROCm GPUs or be a divisor of that number",
+        "ROCm version compatibility is required for tensor parallel execution to function properly"
+      ],
+      "category": "CUDA to ROCm migration guidance"
+    },
+    {
+      "question": "What causes the 'hipErrorNoBinaryForGpu' error when running vLLM on AMD GPUs, and how can it be resolved?",
+      "expected_answer": "The 'hipErrorNoBinaryForGpu' error occurs when vLLM tries to execute GPU kernels that were compiled for a specific GPU architecture that doesn't match the target GPU. This typically happens when the ROCm software stack is not properly configured or when vLLM was compiled with a different ROCm version or GPU architecture than the one being used. To resolve this issue, ensure that the ROCm version installed matches the vLLM compilation requirements, verify that the correct GPU drivers are installed, and recompile vLLM with the appropriate ROCm and GPU architecture flags. Additionally, check that the HIP_VISIBLE_DEVICES environment variable is correctly set to include the target GPU, and that the system's GPU compute capability is supported by the compiled vLLM binaries.",
+      "ground_truth_facts": [
+        "The 'hipErrorNoBinaryForGpu' error is related to GPU architecture compatibility in ROCm-based systems",
+        "vLLM must be compiled with matching ROCm version and GPU architecture to avoid binary incompatibility errors",
+        "Environment variables like HIP_VISIBLE_DEVICES and proper ROCm driver installation are crucial for GPU recognition"
+      ],
+      "category": "CUDA to ROCm migration guidance"
+    },
+    {
+      "question": "Does vLLM support PagedAttention on AMD GPUs running on ROCm, and what are the specific requirements for enabling this feature?",
+      "expected_answer": "Yes, vLLM supports PagedAttention on AMD GPUs running on ROCm, but requires specific configuration. The implementation depends on ROCm 5.6 or later with proper HIP support, and the vLLM version must be 0.4.2 or newer to include AMD GPU optimizations. PagedAttention on AMD GPUs requires the use of ROCm's HSA runtime and proper memory management through HIP memory pools. The feature is enabled automatically when running vLLM with AMD GPUs, but users must ensure that the ROCm stack is properly installed with the correct drivers and that the system has sufficient VRAM to support the paged attention mechanism. Additionally, the model must be compatible with AMD's tensor cores and the specific GPU architecture (e.g., MI200 or MI300 series).",
+      "ground_truth_facts": [
+        "vLLM supports PagedAttention on AMD GPUs through ROCm",
+        "Requires ROCm 5.6 or later with proper HIP support",
+        "vLLM version 0.4.2 or newer is required for AMD GPU optimizations"
+      ],
+      "category": "CUDA to ROCm migration guidance"
+    },
+    {
+      "question": "How do you configure vLLM to efficiently run Llama 3 70B on an AMD GPU cluster with 8 Radeon Instinct MI200 GPUs?",
+      "expected_answer": "To run Llama 3 70B on 8 AMD MI200 GPUs with vLLM, you need to set up the environment with ROCm 5.7+ and PyTorch 2.1+. Configure the vLLM engine with --tensor-parallel-size=8 to utilize all GPUs in parallel. Set --dtype=half for mixed precision training, --max-model-len=4096 for context length, and --gpu-memory-utilization=0.9 to optimize memory usage. Use --host=0.0.0.0 and --port=8000 to expose the API endpoint. For optimal performance, ensure all GPUs are on the same node with proper NUMA configuration and that the system has sufficient system RAM (at least 128GB) to handle the model's memory requirements. The model should be loaded with --model=/path/to/llama3-70b/ to specify the model directory.",
+      "ground_truth_facts": [
+        "vLLM requires ROCm 5.7+ and PyTorch 2.1+ for AMD GPU support",
+        "Llama 3 70B requires tensor parallelism across all available GPUs for optimal performance",
+        "vLLM's --gpu-memory-utilization parameter should be set to 0.9 for efficient memory usage on AMD GPUs"
+      ],
+      "category": "CUDA to ROCm migration guidance"
+    },
+    {
+      "question": "Does vLLM support the Triton backend for ROCm-enabled GPUs, and if so, what are the specific requirements and limitations for using it?",
+      "expected_answer": "vLLM does support the Triton backend for ROCm-enabled GPUs, but with important caveats. The Triton backend requires ROCm 5.6 or later with proper ROCm driver support. For ROCm GPUs, vLLM can utilize Triton's kernel compilation capabilities, but some optimizations may not be fully available compared to NVIDIA CUDA. The Triton backend in vLLM for ROCm is primarily used for attention kernel optimizations and requires the ROCm software stack to be properly installed with compatible drivers. Note that while basic Triton functionality works, some advanced features like flash attention may not be fully optimized or may require additional configuration steps specific to ROCm environments.",
+      "ground_truth_facts": [
+        "vLLM supports the Triton backend for ROCm GPUs",
+        "ROCm 5.6 or later is required for Triton backend support",
+        "Triton backend in vLLM for ROCm has limited optimization compared to CUDA",
+        "ROCm software stack must be properly installed with compatible drivers"
+      ],
+      "category": "CUDA to ROCm migration guidance"
+    },
+    {
+      "question": "What are the key requirements and steps to properly configure a Docker container for running vLLM on ROCm-enabled AMD GPUs?",
+      "expected_answer": "To configure a Docker container for vLLM on ROCm, you must first ensure the host system has ROCm drivers installed and the AMD GPU is properly recognized. Use the AMD ROCm Docker image as your base (e.g., rocm/pytorch:latest) which includes the necessary ROCm runtime libraries. Install vLLM within the container using pip install vllm, ensuring compatibility with the ROCm version. Configure the container with the --device option to expose the GPU and --ipc=host for shared memory access. Set the proper environment variables including ROCM_HOME and PATH to include ROCm libraries. Additionally, ensure the container has sufficient memory allocation and that the vLLM model is compatible with ROCm's supported operations, particularly for attention mechanisms and tensor operations. The container should also mount necessary model directories and set appropriate resource limits for optimal performance.",
+      "ground_truth_facts": [
+        "vLLM requires ROCm drivers to be installed on the host system for AMD GPU support",
+        "The AMD ROCm Docker image should be used as the base container image",
+        "vLLM must be installed within the container using pip with ROCm compatibility",
+        "The Docker container requires --device and --ipc=host flags for GPU access",
+        "ROCm environment variables must be properly configured in the container"
+      ],
+      "category": "CUDA to ROCm migration guidance"
+    },
+    {
+      "question": "How does the gpu_memory_utilization parameter in vLLM affect memory allocation on ROCm GPUs, and what are the key considerations for optimal performance?",
+      "expected_answer": "The gpu_memory_utilization parameter in vLLM controls the fraction of available GPU memory that vLLM will use for model weights and activations when running on ROCm GPUs. On ROCm, this parameter typically ranges from 0.0 to 1.0, where 1.0 uses all available GPU memory and 0.0 uses minimal memory. For optimal performance on ROCm, setting this value to 0.8-0.9 is often recommended to balance between maximizing throughput and avoiding memory fragmentation issues. Unlike NVIDIA GPUs, ROCm's memory management requires careful consideration of the underlying HSA (Heterogeneous System Architecture) memory model, where vLLM's memory allocation must account for both GPU and system memory constraints. The parameter directly impacts the number of concurrent requests that can be processed and affects the overall system stability, particularly when running multiple vLLM instances on the same ROCm GPU.",
+      "ground_truth_facts": [
+        "The gpu_memory_utilization parameter in vLLM controls the fraction of GPU memory used for model weights and activations",
+        "On ROCm GPUs, this parameter should typically be set to 0.8-0.9 for optimal performance to avoid memory fragmentation",
+        "ROCm's HSA memory model requires special consideration for vLLM memory allocation compared to NVIDIA GPUs",
+        "The parameter affects concurrent request processing and system stability on ROCm platforms"
+      ],
+      "category": "CUDA to ROCm migration guidance"
+    },
+    {
+      "question": "How do you configure vLLM to serve an OpenAI compatible API on ROCm-enabled hardware with specific model parameters and performance optimizations?",
+      "expected_answer": "To serve an OpenAI compatible API with vLLM on ROCm, you need to install vLLM with ROCm support using 'pip install vllm --extra-index-url https://download.pytorch.org/whl/rocm5.4.2'. Configure the API server with '--host 0.0.0.0 --port 8000 --model /path/to/model --tensor-parallel-size 4 --dtype float16 --gpu-memory-utilization 0.9' where tensor-parallel-size matches your GPU count, dtype is set to float16 for ROCm compatibility, and gpu-memory-utilization optimizes memory usage. The OpenAI compatible endpoint will be available at http://your-host:8000/v1/completions or http://your-host:8000/v1/chat/completions. Ensure your ROCm version is compatible with the vLLM version and that the model is quantized or formatted properly for ROCm inference.",
+      "ground_truth_facts": [
+        "vLLM requires ROCm-specific installation with PyTorch's ROCm index URL",
+        "OpenAI compatible API endpoints are served at /v1/completions and /v1/chat/completions",
+        "ROCm inference requires proper tensor-parallel-size configuration matching GPU count"
+      ],
+      "category": "CUDA to ROCm migration guidance"
+    },
+    {
+      "question": "What are the key architectural differences between AMD's RDNA 2 and RDNA 3 GPU architectures compared to AMD's CDNA 2 architecture, particularly in terms of compute capabilities and memory subsystems?",
+      "expected_answer": "The RDNA 2 and RDNA 3 architectures are designed primarily for graphics and mixed-workload computing, featuring unified shader arrays with 64-bit wide memory interfaces and support for ray tracing and variable rate shading. RDNA 3 specifically introduces enhanced compute capabilities with 32-bit floating point support and improved memory bandwidth. In contrast, CDNA 2 is purpose-built for AI and HPC workloads with 128-bit wide memory interfaces, optimized for high-throughput compute operations, and designed for data center environments with support for 16-bit and 32-bit floating point operations. The key difference lies in RDNA's graphics-optimized design versus CDNA's compute-optimized architecture, with CDNA 2 offering superior single-precision compute performance and better memory bandwidth for AI workloads.",
+      "ground_truth_facts": [
+        "RDNA 2 and RDNA 3 architectures are optimized for graphics workloads with unified shader arrays",
+        "CDNA 2 architecture is purpose-built for AI and HPC compute workloads",
+        "CDNA 2 offers superior single-precision compute performance compared to RDNA architectures"
+      ],
+      "category": "Radeon vs Instinct GPU comparisons"
+    },
+    {
+      "question": "How does the Radeon RX 7900 XTX compare to the AMD Instinct MI210 in terms of AI inference performance and memory configuration for enterprise AI workloads?",
+      "expected_answer": "The Radeon RX 7900 XTX and Instinct MI210 have distinctly different AI performance characteristics. The RX 7900 XTX has 20480 CUDA cores and 20GB GDDR6 memory, making it suitable for consumer and professional AI inference tasks, though it's not optimized for enterprise AI workloads. The Instinct MI210 features 13312 RDNA 2 cores with 64GB HBM2 memory and is specifically designed for enterprise AI computing with better memory bandwidth and optimized for data center environments. For enterprise AI workloads, the MI210 offers superior performance with its 64GB HBM2 memory and better memory bandwidth, while the RX 7900 XTX provides competitive performance for inference tasks but with less memory capacity and different memory architecture optimized for gaming and general-purpose computing rather than AI training and large-scale inference.",
+      "ground_truth_facts": [
+        "The Radeon RX 7900 XTX has 20GB GDDR6 memory compared to the Instinct MI210's 64GB HBM2 memory",
+        "The RX 7900 XTX has 20480 CUDA cores while the MI210 has 13312 RDNA 2 cores",
+        "The Instinct MI210 is specifically designed for enterprise AI computing with HBM2 memory architecture"
+      ],
+      "category": "Radeon vs Instinct GPU comparisons"
+    },
+    {
+      "question": "How does the memory bandwidth difference between GDDR6 and HBM3 affect the inference performance of large language models on Radeon RX 7900 XTX versus AMD Instinct MI200 accelerators?",
+      "expected_answer": "The memory bandwidth difference significantly impacts LLM inference performance, with HBM3 providing 1.5-2x higher bandwidth (up to 1.2 TB/s) compared to GDDR6 (up to 0.8 TB/s), resulting in 20-40% faster inference times for large language models on Instinct MI200 GPUs compared to Radeon RX 7900 XTX with GDDR6, particularly for models requiring extensive memory operations like attention mechanisms and parameter loading. The HBM3's higher bandwidth and lower latency characteristics enable better handling of the memory-intensive operations typical in transformer architectures, while GDDR6's higher capacity but lower bandwidth creates bottlenecks for memory-bound LLM workloads.",
+      "ground_truth_facts": [
+        "HBM3 memory bandwidth reaches up to 1.2 TB/s compared to GDDR6's maximum 0.8 TB/s",
+        "AMD Instinct MI200 GPUs with HBM3 outperform Radeon RX 7900 XTX with GDDR6 by 20-40% in LLM inference benchmarks",
+        "HBM3's lower latency and higher bandwidth are critical for attention mechanism operations in transformer models"
+      ],
+      "category": "Radeon vs Instinct GPU comparisons"
+    },
+    {
+      "question": "What is the official ROCm support matrix for AMD Instinct vs Radeon GPUs, and how does it impact benchmark compatibility?",
+      "expected_answer": "AMD's ROCm platform provides official support for both Instinct and Radeon GPUs, but with distinct capabilities and limitations. For Instinct GPUs, ROCm offers full native support with comprehensive software stack including HIP, ROCm SDK, and machine learning frameworks like MIOpen and ROCm-ML. Radeon GPUs receive limited ROCm support, primarily focusing on compute workloads rather than graphics acceleration. The support matrix shows that Instinct MI-series GPUs (MI100, MI200, MI300) have full ROCm ecosystem integration with complete driver, runtime, and library support. Radeon GPUs like RX 6000 series have partial support with limited compute capabilities and no official graphics acceleration support in ROCm. This difference impacts benchmark evaluation as Instinct GPUs provide full ecosystem support for AI/ML workloads, while Radeon GPUs are restricted to specific compute benchmarks and lack comprehensive AI infrastructure support.",
+      "ground_truth_facts": [
+        "AMD ROCm officially supports Instinct MI-series GPUs (MI100, MI200, MI300) with full software stack integration",
+        "Radeon GPUs like RX 6000 series have partial ROCm support limited to compute workloads",
+        "Instinct GPUs receive complete ROCm ecosystem support including drivers, runtime, and AI frameworks",
+        "Radeon GPUs lack official graphics acceleration support in ROCm and have limited AI infrastructure capabilities"
+      ],
+      "category": "Radeon vs Instinct GPU comparisons"
+    },
+    {
+      "question": "What are the key differences in matrix core capability between AMD Radeon RX 7900 XTX and AMD Instinct MI200 series GPUs?",
+      "expected_answer": "The AMD Radeon RX 7900 XTX and Instinct MI200 series differ significantly in their matrix core capabilities. The RX 7900 XTX features 128 64-bit FP64 units and 256 32-bit FP32 units organized in 32 CU groups, optimized for gaming and general-purpose compute with some AI acceleration capabilities. In contrast, the Instinct MI200 series includes 128 64-bit FP64 units and 256 32-bit FP32 units in 64 CU groups, specifically designed for HPC and AI workloads with enhanced memory bandwidth and optimized for large matrix operations. The MI200 series also supports 128-bit FP16 operations and includes specialized tensor cores for AI inference, while the RX 7900 XTX has limited tensor core support focused on gaming and general compute tasks.",
+      "ground_truth_facts": [
+        "The RX 7900 XTX has 128 64-bit FP64 units and 256 32-bit FP32 units in 32 CU groups",
+        "The Instinct MI200 series has 128 64-bit FP64 units and 256 32-bit FP32 units in 64 CU groups",
+        "The Instinct MI200 series includes specialized tensor cores for AI inference while RX 7900 XTX has limited tensor core support"
+      ],
+      "category": "Radeon vs Instinct GPU comparisons"
+    },
+    {
+      "question": "How does the peer-to-peer (P2P) memory access performance between AMD Radeon RX 7900 XTX and AMD Instinct MI200 series GPUs differ when transferring data between GPUs connected via PCIe 5.0?",
+      "expected_answer": "The AMD Radeon RX 7900 XTX and Instinct MI200 series GPUs both support PCIe 5.0 connectivity, but the P2P memory access performance differs significantly due to their distinct architectures. The RX 7900 XTX, while supporting P2P transfers, experiences higher latency and lower bandwidth compared to the Instinct MI200 series, which is optimized for high-performance computing workloads. The MI200 series benefits from enhanced memory controllers and optimized interconnects designed for HPC environments, achieving approximately 20-30% better P2P bandwidth for large data transfers. Additionally, the Instinct MI200 series has better support for multi-GPU configurations in data center environments, while the RX 7900 XTX's P2P capabilities are more limited to consumer and workstation use cases.",
+      "ground_truth_facts": [
+        "AMD Radeon RX 7900 XTX and Instinct MI200 series both support PCIe 5.0 connectivity for P2P memory access",
+        "The Instinct MI200 series has optimized memory controllers and interconnects designed for HPC environments",
+        "P2P bandwidth performance is approximately 20-30% better on Instinct MI200 series compared to RX 7900 XTX for large data transfers",
+        "The RX 7900 XTX's P2P capabilities are more limited to consumer and workstation use cases",
+        "Instinct MI200 series is optimized for multi-GPU configurations in data center environments"
+      ],
+      "category": "Radeon vs Instinct GPU comparisons"
+    },
+    {
+      "question": "How do the power limits and cooling requirements differ between Radeon RX 7900 XTX and Instinct MI210 GPUs in datacenter versus consumer configurations?",
+      "expected_answer": "The Radeon RX 7900 XTX consumer GPU has a TDP of 300W with standard retail cooling solutions, while the Instinct MI210 datacenter GPU operates at 300W but requires specialized liquid cooling infrastructure and can sustain higher sustained power delivery due to its server-grade design. In datacenter environments, Instinct MI210s can maintain 300W+ power limits with advanced cooling systems, whereas RX 7900 XTX consumer cards are limited by their 300W TDP and typical air-cooling solutions. The MI210's datacenter configuration allows for better thermal management through liquid cooling and optimized airflow, while RX 7900 XTX consumer cards are constrained by their physical form factor and cooling envelope.",
+      "ground_truth_facts": [
+        "Radeon RX 7900 XTX consumer GPU has 300W TDP with air-cooling limitations",
+        "Instinct MI210 datacenter GPU operates at 300W but supports higher sustained power delivery",
+        "Datacenter GPUs like Instinct MI210 require specialized liquid cooling infrastructure for optimal performance"
+      ],
+      "category": "Radeon vs Instinct GPU comparisons"
+    },
+    {
+      "question": "How does the SR-IOV virtualization support differ between Radeon Instinct MI200/MI300 series and Radeon RX 7000 series GPUs in terms of hardware and software capabilities?",
+      "expected_answer": "The Radeon Instinct MI200 and MI300 series GPUs provide robust SR-IOV support through AMD's Virtual GPU (VGPU) technology, enabling multiple virtual machines to share a single physical GPU with dedicated compute resources and memory allocation. These data center GPUs support up to 16 virtual GPUs per physical card and include hardware-assisted virtualization features like memory virtualization and compute isolation. In contrast, the Radeon RX 7000 series consumer GPUs do not support SR-IOV virtualization in their current implementations, as they are designed for single-user desktop applications rather than multi-tenant server environments. The Instinct series includes dedicated virtualization firmware and driver support in ROCm, while RX 7000 series drivers are optimized for gaming and single-GPU performance with no virtualization capabilities.",
+      "ground_truth_facts": [
+        "Radeon Instinct MI200 and MI300 series GPUs support SR-IOV virtualization with up to 16 virtual GPUs per physical card",
+        "Radeon RX 7000 series consumer GPUs do not support SR-IOV virtualization",
+        "Radeon Instinct GPUs include dedicated virtualization firmware and ROCm driver support for virtualization",
+        "SR-IOV support in Instinct GPUs enables hardware-assisted memory virtualization and compute isolation",
+        "RX 7000 series GPUs are designed for single-user desktop applications without multi-tenant virtualization capabilities"
+      ],
+      "category": "Radeon vs Instinct GPU comparisons"
+    },
+    {
+      "question": "How do the FP64 compute capabilities of Radeon RX 7900 XTX and AMD Instinct MI200 series GPUs compare in terms of theoretical peak performance and real-world AI training workloads?",
+      "expected_answer": "The Radeon RX 7900 XTX delivers 128 FP64 TFLOPS theoretical peak performance with 40 compute units running at 2400 MHz, while the AMD Instinct MI200 series (MI210/MI250) provides 160-200 FP64 TFLOPS depending on configuration. In real-world AI training workloads, the Instinct MI200 series typically outperforms the RX 7900 XTX by 20-40% due to better memory bandwidth (256 GB/s vs 1024 GB/s for the MI250), higher memory capacity (128GB HBM2 vs 16GB GDDR6), and optimized architecture for AI compute. The MI200 series also benefits from better memory hierarchy and lower latency for large model training scenarios.",
+      "ground_truth_facts": [
+        "Radeon RX 7900 XTX has 40 compute units with 128 FP64 TFLOPS theoretical peak",
+        "AMD Instinct MI200 series provides 160-200 FP64 TFLOPS depending on model",
+        "Instinct MI200 series offers superior memory bandwidth and capacity for AI workloads"
+      ],
+      "category": "Radeon vs Instinct GPU comparisons"
+    },
+    {
+      "question": "What are the key differences in form factor and PCIe configuration between AMD Radeon RX 7900 XTX and AMD Instinct MI250 accelerators?",
+      "expected_answer": "The AMD Radeon RX 7900 XTX features a dual-slot form factor with a 250W TDP and uses PCIe 4.0 x16 for connectivity, designed for gaming and general-purpose compute. In contrast, the AMD Instinct MI250 is a single-slot, high-TDP accelerator with 300W+ power consumption, utilizing PCIe 5.0 x16 for high-bandwidth AI and HPC workloads. The RX 7900 XTX has a more compact physical footprint suitable for standard PC cases, while the MI250 is designed for data center rackmount environments with enhanced cooling requirements. Additionally, the MI250 includes specialized features like HBM2e memory and optimized for multi-GPU configurations in enterprise environments.",
+      "ground_truth_facts": [
+        "The Radeon RX 7900 XTX uses PCIe 4.0 x16 interface",
+        "The Instinct MI250 uses PCIe 5.0 x16 interface",
+        "The RX 7900 XTX has a dual-slot form factor while MI250 has a single-slot form factor"
+      ],
+      "category": "Radeon vs Instinct GPU comparisons"
+    },
+    {
+      "question": "What is HIP (Heterogeneous-Compute Interface for Portability) and how does it facilitate migration from CUDA to ROCm?",
+      "expected_answer": "HIP (Heterogeneous-Compute Interface for Portability) is a C++ runtime API and programming model developed by AMD that enables developers to write portable code for GPU computing across different platforms. HIP provides a layer of abstraction that allows CUDA-based GPU applications to be ported to ROCm-enabled AMD GPUs with minimal code changes. It offers a set of APIs that mirror CUDA's functionality, including memory management, kernel launching, and stream operations, while providing AMD-specific optimizations. HIP supports both CUDA-style syntax and native AMD GPU programming, making it a key tool for migrating existing CUDA applications to AMD's ROCm platform with reduced development effort and improved code portability.",
+      "ground_truth_facts": [
+        "HIP is a C++ runtime API and programming model developed by AMD for GPU computing",
+        "HIP enables portability of GPU applications across different platforms including AMD GPUs and NVIDIA GPUs",
+        "HIP provides CUDA API equivalents to facilitate migration from CUDA to ROCm",
+        "HIP supports both CUDA-style syntax and native AMD GPU programming",
+        "HIP reduces development effort when migrating existing CUDA applications to AMD's ROCm platform"
+      ],
+      "category": "CUDA to ROCm migration guidance"
+    },
+    {
+      "question": "When migrating CUDA code to ROCm, what are the key differences between hipify-perl and hipify-clang tools, and which one should be preferred for modern CUDA codebases?",
+      "expected_answer": "Hipify-perl and hipify-clang are both tools in the HIP ecosystem for migrating CUDA code to ROCm, but they differ in their approach and capabilities. Hipify-perl is a Perl-based tool that performs text-based transformations and is more suitable for simple CUDA code patterns, but it has limited understanding of complex CUDA constructs and may require manual intervention for proper migration. Hipify-clang, on the other hand, is a more advanced tool built on the Clang compiler infrastructure that provides semantic understanding of CUDA code, enabling it to handle complex CUDA constructs, proper type conversions, and better handling of CUDA-specific features like dynamic parallelism and cooperative groups. For modern CUDA codebases, hipify-clang is generally preferred as it provides more accurate and complete migration with fewer manual corrections required, though hipify-perl can still be useful for simple code transformations or when working with older CUDA code patterns.",
+      "ground_truth_facts": [
+        "Hipify-perl is a Perl-based tool that performs text-based transformations rather than semantic analysis",
+        "Hipify-clang is built on Clang compiler infrastructure and provides semantic understanding of CUDA code",
+        "Hipify-clang is preferred for modern CUDA codebases due to better handling of complex CUDA constructs and reduced manual intervention requirements",
+        "Hipify-perl is more limited in its understanding of complex CUDA features like dynamic parallelism and cooperative groups",
+        "Both tools are part of the HIP ecosystem for CUDA to ROCm migration"
+      ],
+      "category": "CUDA to ROCm migration guidance"
+    },
+    {
+      "question": "When migrating CUDA code to ROCm, what is the direct HIP API equivalent of cudaMalloc and what are the key differences in usage patterns?",
+      "expected_answer": "The direct HIP API equivalent of cudaMalloc is hipMalloc. While both functions allocate memory on the GPU, hipMalloc requires the same parameter signature: hipMalloc((void**)&device_ptr, size), where device_ptr is a pointer to a pointer and size is the memory size in bytes. The key differences in usage include: 1) HIP functions are prefixed with 'hip' instead of 'cuda', 2) HIP provides additional error checking capabilities through hipGetLastError() and hipGetErrorString(), 3) The HIP runtime handles memory allocation in a way that is compatible with AMD GPUs and can be used in the same codebase for both NVIDIA and AMD hardware through conditional compilation, 4) HIP's memory management is designed to be more portable across different GPU architectures and operating systems.",
+      "ground_truth_facts": [
+        "hipMalloc is the direct HIP API equivalent of cudaMalloc for GPU memory allocation",
+        "Both functions use the same parameter signature: (void**)&device_ptr, size",
+        "HIP provides cross-platform compatibility for AMD and NVIDIA GPU code",
+        "HIP memory allocation is designed to work with AMD GPU architectures"
+      ],
+      "category": "CUDA to ROCm migration guidance"
+    },
+    {
+      "question": "How do I migrate CUDA streams to HIP streams in my ROCm-compatible application, and what are the key differences in API usage between the two platforms?",
+      "expected_answer": "To migrate CUDA streams to HIP streams, you need to replace CUDA's cudaStream_t with HIP's hipStream_t and update all stream-related API calls. The primary changes include: 1) Replacing cudaStreamCreate() with hipStreamCreate(), 2) Replacing cudaStreamDestroy() with hipStreamDestroy(), 3) Replacing cudaStreamSynchronize() with hipStreamSynchronize(), and 4) Replacing cudaStreamWaitEvent() with hipStreamWaitEvent(). Key differences include HIP's support for stream priorities through hipStreamCreateWithPriority() which is not directly equivalent to CUDA's stream creation flags, and HIP's different error handling where CUDA's cudaError_t becomes hipError_t. Additionally, HIP provides hipStreamGetFlags() to retrieve stream flags, which is not available in CUDA's stream API. The migration also requires updating any CUDA-specific stream properties or flags to their HIP equivalents, and ensuring that any CUDA stream-based optimizations are re-evaluated for ROCm's stream implementation.",
+      "ground_truth_facts": [
+        "CUDA streams are replaced with HIP streams using hipStream_t type",
+        "cudaStreamCreate() maps to hipStreamCreate() for stream creation",
+        "cudaStreamDestroy() maps to hipStreamDestroy() for stream destruction",
+        "HIP provides hipStreamCreateWithPriority() as an alternative to CUDA's stream creation flags",
+        "HIP stream API includes hipStreamGetFlags() which is not available in CUDA"
+      ],
+      "category": "CUDA to ROCm migration guidance"
+    },
+    {
+      "question": "What are the key differences between cuBLAS and rocBLAS/hipBLAS when migrating CUDA applications, and how do I handle the API parameter changes for matrix operations?",
+      "expected_answer": "When migrating from cuBLAS to rocBLAS/hipBLAS, the primary differences include: 1) API naming conventions - cuBLAS uses 'cublasX' while rocBLAS uses 'rocblasX' and hipBLAS uses 'hipblasX', 2) Handle parameter changes such as the 'cublasOperation_t' enum values being mapped to 'rocblas_operation_t' with similar but not identical values, 3) Memory management differences where cuBLAS uses CUDA memory management while rocBLAS/hipBLAS requires HIP memory management or AMD's memory allocation functions, 4) The data type mappings are mostly equivalent but some types like 'cuComplex' map to 'rocblas_complex_float', 5) Error handling changes from cuBLAS_STATUS_ to rocBLAS_STATUS_ constants, and 6) The initialization and destruction functions differ - cuBLAS uses 'cublasCreate' while rocBLAS uses 'rocblas_create_handle'. Additionally, the performance characteristics and optimization strategies may vary between NVIDIA and AMD architectures, requiring profiling and tuning for optimal results.",
+      "ground_truth_facts": [
+        "cuBLAS and rocBLAS/hipBLAS have different API naming conventions with cuBLAS using 'cublasX' and rocBLAS using 'rocblasX'",
+        "The 'cublasOperation_t' enum values map to 'rocblas_operation_t' with similar but not identical values",
+        "Memory management in rocBLAS/hipBLAS requires HIP memory management or AMD's memory allocation functions instead of CUDA memory management",
+        "Data type mappings exist between cuBLAS and rocBLAS but some types like 'cuComplex' map to 'rocblas_complex_float'",
+        "Error handling constants change from cuBLAS_STATUS_ to rocBLAS_STATUS_",
+        "Initialization functions differ between cuBLAS ('cublasCreate') and rocBLAS ('rocblas_create_handle')"
+      ],
+      "category": "CUDA to ROCm migration guidance"
+    },
+    {
+      "question": "What are the key differences between cuDNN and MIOpen that impact code migration, and how do their API structures differ for convolution operations?",
+      "expected_answer": "The primary differences between cuDNN and MIOpen for convolution operations include: 1) MIOpen uses a different set of data type enumerations and requires explicit memory layout specifications (e.g., NCHW vs NHWC), 2) MIOpen's convolution descriptor API uses different parameter names and default values compared to cuDNN (e.g., padding and stride parameters are handled differently), 3) MIOpen requires explicit handling of tensor operations through its own tensor descriptor system, and 4) MIOpen's performance characteristics and supported operations differ from cuDNN, particularly in mixed-precision training where MIOpen may require different data type configurations. Additionally, MIOpen's build process and library linking differ from cuDNN, requiring changes to build scripts and dependency management.",
+      "ground_truth_facts": [
+        "MIOpen uses different data type enumerations than cuDNN",
+        "MIOpen's convolution descriptor API has different parameter names and default values",
+        "MIOpen requires explicit tensor descriptor handling for operations"
+      ],
+      "category": "CUDA to ROCm migration guidance"
+    },
+    {
+      "question": "How should inline PTX assembly code be handled when migrating CUDA applications to ROCm, and what are the key differences in the ROCm ecosystem?",
+      "expected_answer": "When migrating CUDA applications to ROCm, inline PTX assembly code must be replaced with either HIP assembly syntax or ported to use ROCm's native assembly format. Unlike CUDA's inline PTX which directly embeds AMD GPU assembly instructions, ROCm requires either using HIP's inline assembly syntax (which is compatible with AMD GPUs) or converting the PTX to AMD's assembly format. The key differences include: 1) ROCm uses a different assembly syntax and instruction set than CUDA's PTX, 2) HIP provides a layer of abstraction that can handle some inline assembly operations, and 3) ROCm's assembly support is more limited compared to CUDA's extensive inline PTX capabilities. Migration typically involves either rewriting the assembly in HIP syntax or converting PTX to AMD assembly using tools like the AMD GPU Code Analyzer or manual conversion.",
+      "ground_truth_facts": [
+        "CUDA's inline PTX assembly cannot be directly used in ROCm without modification",
+        "ROCm requires either HIP inline assembly syntax or AMD-specific assembly format",
+        "HIP provides abstraction layer that can handle some inline assembly operations"
+      ],
+      "category": "CUDA to ROCm migration guidance"
+    },
+    {
+      "question": "What are the equivalent thread block and grid dimension configurations when migrating CUDA code to ROCm, specifically regarding the maximum number of threads per block and optimal grid dimensions for performance?",
+      "expected_answer": "When migrating from CUDA to ROCm, the maximum number of threads per block is 1024 on AMD GPUs, which is the same as CUDA's limit. For optimal performance, ROCm recommends using block sizes that are multiples of 32 (warp size) and avoiding block sizes larger than 256 threads for better occupancy. Grid dimensions should be configured to ensure adequate workload distribution across the GPU's compute units, with typical grid sizes ranging from hundreds to thousands of blocks depending on the problem size. The AMD GPU architecture supports up to 2^32 blocks per grid dimension, matching CUDA's capability. When porting kernels, it's important to verify that the thread block dimensions (x,y,z) multiply to no more than 1024 threads per block, and that the grid dimensions (gridDim.x, gridDim.y, gridDim.z) are chosen to maximize GPU utilization while maintaining memory coalescing patterns.",
+      "ground_truth_facts": [
+        "AMD GPUs support up to 1024 threads per block, matching CUDA's limit",
+        "ROCm recommends block sizes that are multiples of 32 (warp size) for optimal occupancy",
+        "The maximum number of blocks per grid dimension is 2^32 on AMD GPUs, same as CUDA",
+        "Thread block dimensions should multiply to no more than 1024 threads per block",
+        "ROCm performance optimization favors block sizes of 128 or 256 threads for better occupancy"
+      ],
+      "category": "CUDA to ROCm migration guidance"
+    },
+    {
+      "question": "How does HIP handle shared memory allocation differently from CUDA, and what are the key considerations when migrating CUDA code that uses shared memory?",
+      "expected_answer": "In HIP, shared memory allocation is handled through the __shared__ keyword in kernel functions, similar to CUDA, but with some key differences. The main considerations for migration include: 1) HIP uses the HIP_DYNAMIC_SHARED macro to declare dynamic shared memory, which is equivalent to CUDA's dynamic shared memory declaration; 2) The shared memory size must be specified at kernel launch time in HIP, just like in CUDA; 3) HIP provides the hipMallocManaged API for managed shared memory allocation, but this is not directly equivalent to CUDA's shared memory; 4) The maximum shared memory per block is hardware-dependent and should be checked using hipDeviceGetAttribute; 5) When migrating, ensure that shared memory access patterns remain coalesced and that proper synchronization is maintained using __syncthreads() in HIP kernels.",
+      "ground_truth_facts": [
+        "HIP uses the __shared__ keyword for shared memory declaration in kernel functions, similar to CUDA",
+        "HIP provides HIP_DYNAMIC_SHARED macro for dynamic shared memory allocation equivalent to CUDA's dynamic shared memory",
+        "Shared memory size must be specified at kernel launch time in HIP, just like in CUDA",
+        "HIP's maximum shared memory per block is hardware-dependent and requires checking with hipDeviceGetAttribute",
+        "Proper synchronization with __syncthreads() is required in HIP kernels for shared memory operations"
+      ],
+      "category": "CUDA to ROCm migration guidance"
+    },
+    {
+      "question": "How do CUDA events differ from HIP events in terms of functionality and migration considerations when porting GPU compute workloads from CUDA to ROCm?",
+      "expected_answer": "CUDA events and HIP events serve similar purposes for asynchronous GPU operation tracking, but have key differences in implementation and migration. In CUDA, events are created with cudaEventCreate() and synchronized with cudaEventSynchronize(), while HIP uses hipEventCreate() and hipEventSynchronize(). The main migration considerations include: 1) HIP events support the same timing functionality as CUDA events but may require different synchronization patterns due to ROCm's different memory model, 2) HIP events can be created with hipEventDisableTiming flag to reduce overhead when timing is not needed, 3) The HIP event API provides similar functionality to CUDA but with different parameter names and some behavioral differences in edge cases, 4) When migrating, developers must replace all cudaEvent* calls with their hipEvent* equivalents and ensure proper error handling, 5) HIP events can be used with hipStream_t streams in the same way as CUDA events with cudaStream_t, but the underlying ROCm runtime handles some edge cases differently, particularly around event ordering and stream synchronization.",
+      "ground_truth_facts": [
+        "CUDA events and HIP events both provide asynchronous GPU operation timing and synchronization capabilities",
+        "HIP events can be created with hipEventDisableTiming flag to reduce overhead when timing is not needed",
+        "The HIP event API requires replacing all cudaEvent* calls with hipEvent* equivalents during migration",
+        "HIP events support similar functionality to CUDA events but with different parameter names and some behavioral differences",
+        "HIP events can be used with hipStream_t streams in the same way as CUDA events with cudaStream_t"
+      ],
+      "category": "CUDA to ROCm migration guidance"
+    }
+  ]
+}

@@ -8,9 +8,12 @@ import torch
 from typing import List, Dict
 from tqdm import tqdm
 
+# Import config for consistent configuration handling
+from src.config import config
+
 
 # Default settings for Embedder (supports Lemonade SDK and Fireworks AI)
-DEFAULT_MODEL = 'BAAI/bge-large-en-v1.5'
+DEFAULT_MODEL = config.DEFAULT_EMBEDDING_MODEL
 BATCH_SIZE = 64
 
 
