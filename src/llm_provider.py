@@ -84,7 +84,7 @@ class LocalGPUProvider(BaseLLMProvider):
     Supports both blocking and streaming generation via TextIteratorStreamer.
     """
 
-    DEFAULT_MODEL_ID = os.environ.get("LOCAL_MODEL_ID", "google/gemma-4-12b-it")
+    DEFAULT_MODEL_ID = os.environ.get("LOCAL_MODEL_ID", "google/gemma-4-12B-it")
 
     def __init__(self, model_id: Optional[str] = None):
         import torch

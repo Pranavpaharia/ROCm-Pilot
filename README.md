@@ -20,45 +20,46 @@ Setting up AI and machine learning environments on AMD hardware is hard. Develop
 **ROCm-Pilot** is an AI assistant that:
 
 1. **Auto-detects your AMD hardware** (GPU model, ROCm version, installed frameworks)
-2. **Retrieves relevant official documentation** from AMD's GitHub repos
-3. **Generates tailored, copy-pasteable setup instructions** via Fireworks AI or Local Models
+2. **Retrieves relevant official documentation** from AMD's GitHub repos using **Hybrid Search (BM25 + ChromaDB Vector)**
+3. **Generates tailored, copy-pasteable setup instructions** using **Native On-Device LLMs** or Cloud APIs.
 4. **Cites its sources** so you can verify every recommendation
 
 ---
 
-## ✨ Key Features (New Updates!)
+## ✨ Key Features & Tech Stack
 
-We've massively expanded ROCm-Pilot during the hackathon. Here is what's new:
+We've massively expanded ROCm-Pilot to be a production-ready, resilient RAG pipeline. Here is the tech stack and our core features:
 
+- 🧠 **Native Local AI Integration:** Run completely private, open-weight models natively on AMD GPUs. **Currently defaults to the bleeding-edge Google Gemma-4-12B-it model**, powered by the latest `transformers` library compiled from source. It runs natively in the VRAM of your AMD hardware without requiring API keys!
+- ☁️ **AMD GPU Cloud (DigitalOcean):** Fully tested and deployed on DigitalOcean's **AMD Instinct MI300X (192GB VRAM)** instances, ensuring massive scalability and lightning-fast inference.
+- 🔍 **Hybrid Search (Dense + Sparse):** We overhauled the retrieval engine to use a Hybrid approach. It combines **ChromaDB dense vectors** (`BAAI/bge-large-en-v1.5`) for semantic matching with the **BM25 Sparse Algorithm** (`rank_bm25`) for exact keyword matching (like specific ROCm version numbers or GPU IDs).
+- 📚 **Dual-Tiered Knowledge Base:** Our RAG documents are structured with both **core** and **full versions**, ensuring the agent can retrieve either quick reference snippets or deep, comprehensive technical guides depending on the complexity of the query.
+- 🛠️ **Agentic Tool Calling (Read-Only):** The AI operates autonomously with **read-only tool calling enabled**, allowing it to safely introspect system environments (like `rocm-smi`) and verify hardware states without executing destructive commands.
+- 🛠️ **Ultra-Fast `uv` Dependency Management:** The monolithic setup script has been replaced by an environment-aware, modular system powered by Astral's `uv`. This guarantees lightning-fast, reproducible, and isolated `.venv` builds across any AMD machine.
 - 🖥️ **Sleek Web Interface:** A beautiful, dark-mode Gradio web app with source citations, diagnostic readouts, and model toggles.
-- 🚀 **Universal AMD Support (Tested on MI300X):** While we extensively tested and optimized for the massive 192GB Instinct MI300X, ROCm-Pilot's hardware detection and setup guidance **works seamlessly across all ROCm-compatible AMD hardware** (including Radeon consumer GPUs like RX 7900 XTX and older Instinct accelerators).
-- 🧠 **Local Open-Weights Inference:** Run completely private, local open-weight models featuring **Google Gemma 4** directly on your AMD GPU VRAM using HuggingFace Accelerate and PyTorch native integration.
-- ☁️ **Cloud API Integration:** Blazing-fast inference via Fireworks AI API, fully supporting next-gen models like `deepseek-v4-pro` and `glm-5p2`.
-- 🍋 **Model Serving with Lemonade:** Automated deployment and robust model serving via the **Lemonade SDK**, seamlessly integrating partner tech with AMD hardware.
-- 📊 **Live AMD GPU Monitor:** Real-time VRAM, Temperature, and GPU Utilization progress bars with HTML color coding right inside the Web UI.
-- 🛡️ **Resilient AI Pipeline (OOM Failover):** If a local LLM or ghost process fills up all 192GB of your MI300X VRAM, the semantic embedding and cross-encoder models will gracefully catch the `OutOfMemoryError` and **dynamically fail over to the CPU** so the app never crashes!
-- 🤔 **Dynamic Reasoning UI:** Intercepts and beautifully formats hidden "Chain-of-Thought" reasoning streams (from models like DeepSeek Pro) into sleek HTML accordions.
-- 📡 **Remote Machine Diagnostics:** Running the UI on your laptop but deploying to a remote server? Run our one-line `diagnose_system.py` script on any remote AMD machine and paste the JSON output directly into the Web UI to inject the remote machine's context into the LLM!
-- 🎯 **Cross-Encoder Reranking:** We added an MS-MARCO Cross-Encoder pipeline to re-score and re-rank vector search results, drastically improving documentation retrieval precision.
+- 🛡️ **Resilient AI Pipeline:** Automatic model fallback capabilities and error handling to ensure continuous operation even during configuration mismatches.
+- 🍋 **Lemonade SDK Integration:** Automated deployment and robust model serving via the **Lemonade SDK**, seamlessly integrating partner tech with AMD hardware.
 
 ---
 
 ## 🏗️ Architecture
 
-```
-User Question → Environment Detection → Document Retrieval (ChromaDB + Cross-Encoder)
-                                              ↓
-                               Context Assembly → LLM (Local or Cloud) → Grounded Answer
+```text
+User Question → Environment Detection 
+                      ↓
+Document Retrieval (Hybrid: BM25 + ChromaDB) → Context Assembly
+                      ↓
+LLM (Native Gemma-4 on AMD / Cloud) → Grounded Answer
 ```
 
 | Component | Technology |
 |---|---|
-| **LLM Inference** | Fireworks AI API or Local AMD VRAM (`device_map="auto"`) |
-| **Embeddings** | `BAAI/bge-large-en-v1.5` via sentence-transformers on AMD GPU |
-| **Reranking** | `cross-encoder/ms-marco-MiniLM-L-6-v2` |
+| **LLM Inference** | Native `google/gemma-4-12B-it` on AMD GPU or Fireworks Cloud API |
+| **Embeddings** | `BAAI/bge-large-en-v1.5` on AMD GPU |
+| **Sparse Retrieval** | `rank_bm25` for precise keyword matching |
 | **Vector Store** | ChromaDB (persistent, local) |
-| **Knowledge Base** | Official ROCm docs from GitHub |
 | **Environment Detection** | rocm-smi, rocminfo, PyTorch introspection |
+| **Cloud Infrastructure** | DigitalOcean AMD Instinct MI300X Droplets |
 
 ## 📦 Knowledge Base Sources
 
@@ -68,6 +69,7 @@ User Question → Environment Detection → Document Retrieval (ChromaDB + Cross
 | Linux Install Guides | [ROCm/rocm-install-on-linux](https://github.com/ROCm/rocm-install-on-linux) |
 | Technical Blogs | [ROCm/rocm-blogs](https://github.com/ROCm/rocm-blogs) |
 | AI Developer Hub | [ROCm/gpuaidev](https://github.com/ROCm/gpuaidev) |
+| GPU Database | Internal JSON device registry |
 
 ## 🚀 Quick Start
 
@@ -78,31 +80,31 @@ git clone https://github.com/YOUR_USERNAME/ROCm-Pilot.git
 cd ROCm-Pilot
 ```
 
-### 2. Set your API Key (Optional)
+### 2. Run the environment setup
 
-If using Cloud Models:
-```bash
-export FIREWORKS_API_KEY='your-fireworks-api-key'
-```
-
-### 3. Run the setup script
+We use `uv` for blazing-fast, isolated Python dependency management.
 
 ```bash
-chmod +x setup.sh
-bash setup.sh
+chmod +x setup-deps.sh
+./setup-deps.sh
 ```
 
-This will:
-- Install PyTorch with ROCm support and dependencies (including `accelerate` for local multi-GPU).
-- Clone official AMD documentation repos.
-- Build the vector knowledge base using GPU-accelerated embeddings.
+This will automatically create a `.venv`, install PyTorch for ROCm, and pull the latest HuggingFace libraries.
 
-### 4. Start the Web UI
+### 3. Start the Agent
 
+You can start the RAG agent in two ways:
+
+**To run natively on your AMD GPU (Downloads Gemma-4-12B into VRAM):**
 ```bash
-python3 src/app_web.py --share
+./run.sh --provider local_gpu
 ```
-This will spin up the web interface and print a public `gradio.live` link so you can access the UI from anywhere.
+
+**To run using the cloud API:**
+*(Make sure to set `FIREWORKS_API_KEY` in your `.env` file!)*
+```bash
+./run.sh --provider cloud
+```
 
 ## 💬 Example Queries
 
@@ -111,25 +113,24 @@ This will spin up the web interface and print a public `gradio.live` link so you
 🧑 You: What ROCm version supports Ubuntu 24.04?
 🧑 You: How do I run Llama 3 with vLLM on AMD?
 🧑 You: What's the difference between MI300X and MI250?
-🧑 You: How do I check if my GPU is detected by ROCm?
+🧑 You: What version of PyTorch do I need for gfx942?
 ```
 
 ## 📁 Project Structure
 
-```
+```text
 ROCm-Pilot/
-├── setup.sh                 # One-shot setup (deps + knowledge base)
+├── setup-deps.sh            # Ultra-fast dependency setup using uv
+├── run.sh                   # Entrypoint for the agent
 ├── src/
 │   ├── app_web.py           # Gradio Web Interface
 │   ├── scraper.py           # Collects docs from cloned GitHub repos
 │   ├── chunker.py           # Splits docs into embeddable chunks
 │   ├── embedder.py          # GPU-accelerated embedding + ChromaDB storage
-│   ├── retriever.py         # Semantic search & Cross-Encoder reranking
+│   ├── retriever.py         # Hybrid search (Chroma + BM25)
 │   ├── agent.py             # Main RAG agent (orchestrator)
 │   ├── env_detector.py      # AMD hardware auto-detection & GPU Monitor
-│   ├── llm_provider.py      # LLM wrapper (Cloud & Local)
-│   ├── fireworks_client.py  # Fireworks API integration
-│   └── diagnose_system.py   # Remote environment diagnosis script
+│   └── llm_provider.py      # LLM wrapper (Local Gemma 4 & Cloud Fallback)
 ├── data/                    # Vector store and raw docs
 └── notebooks/               # Jupyter demo notebooks
 ```

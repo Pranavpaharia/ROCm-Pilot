@@ -1,6 +1,6 @@
 # Core RAG dependencies
 chromadb~=0.4.24
-sentence-transformers~=2.7.0
+sentence-transformers
 openai>=1.52.0
 numpy<2.0.0
 rank_bm25>=0.2.2
@@ -22,6 +22,6 @@ IPython>=8.0.0
 gradio~=4.44.0
 
 # Local LLM inference
-transformers>=4.45.2
+transformers @ git+https://github.com/huggingface/transformers.git
 accelerate>=0.25.0
 bitsandbytes>=0.41.0

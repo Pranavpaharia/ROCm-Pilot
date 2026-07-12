@@ -696,7 +696,7 @@ if __name__ == '__main__':
 
     model_arg = args.model
     if not model_arg:
-        model_arg = "google/gemma-4-31b-it" if args.provider == "local_gpu" else "accounts/fireworks/models/deepseek-v4-pro"
+        model_arg = "google/gemma-4-12B-it" if args.provider == "local_gpu" else "accounts/fireworks/models/deepseek-v4-pro"
 
     interactive_session(
         db_path=args.db_path,

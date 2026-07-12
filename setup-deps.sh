@@ -11,7 +11,7 @@ if ! command -v uv &> /dev/null; then
 fi
 
 # Ensure uv is in PATH if installed locally
-export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
 
 if [ ! -d ".venv" ]; then
     echo "  ↓ Creating virtual environment (.venv)..."
